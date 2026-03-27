@@ -1,0 +1,2754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Soapbox Racer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-display: 'Boogaloo', 'Arial Black', sans-serif;
+    --font-body: 'Nunito', 'Arial Black', sans-serif;
+    --font-mono: 'Courier New', monospace;
+    --bg-dark: #1a1a2e;
+    --bg-overlay: rgba(0, 0, 0, 0.6);
+    --bg-card: rgba(255, 255, 255, 0.12);
+    --bg-card-solid: #2a2a4a;
+    --red: #FF3344;
+    --orange: #FF8800;
+    --yellow: #FFD700;
+    --green: #44DD66;
+    --blue: #4488FF;
+    --purple: #AA44FF;
+    --pink: #FF44AA;
+    --text-primary: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+    --text-shadow-heavy: 4px 4px 0 rgba(0, 0, 0, 0.7);
+    --btn-primary: #FF3344;
+    --btn-border: 4px solid rgba(0, 0, 0, 0.3);
+    --border-radius: 16px;
+    --border-radius-lg: 24px;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    background: #000;
+    font-family: var(--font-body);
+  }
+  canvas { display: block; }
+
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0) 100%);
+    z-index: 10;
+  }
+  .hud-item {
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 20px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    letter-spacing: 1px;
+  }
+
+  #countdown-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    z-index: 20;
+  }
+  #countdown-text {
+    font-family: var(--font-display);
+    font-size: 150px;
+    color: #fff;
+    text-shadow: 4px 4px 12px rgba(0,0,0,0.6), 0 0 40px rgba(255,255,255,0.3);
+    animation: countdownPop 0.7s ease-out forwards;
+  }
+  #countdown-text.go {
+    color: #44FF44;
+  }
+  @keyframes countdownPop {
+    0% { transform: scale(2.5); opacity: 0; }
+    40% { transform: scale(0.9); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  #gameover-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.5);
+    z-index: 30;
+  }
+  #gameover-card {
+    background: rgba(20,20,30,0.92);
+    border-radius: 20px;
+    padding: 40px 50px;
+    text-align: center;
+    border: 3px solid rgba(255,255,255,0.15);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  }
+  #gameover-card h1 {
+    font-family: var(--font-display);
+    font-size: 52px;
+    color: #FF4444;
+    margin: 0 0 20px 0;
+    text-shadow: 3px 3px 8px rgba(0,0,0,0.5);
+    letter-spacing: 4px;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+    margin: 15px 0;
+  }
+  .stat-label {
+    color: #aaa;
+    font-family: var(--font-body);
+    font-size: 16px;
+  }
+  .stat-value {
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 22px;
+  }
+  .float-text {
+    position: absolute;
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    pointer-events: none;
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
+    z-index: 25;
+  }
+
+  .milestone-banner { position:absolute; top:30%; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; animation: milestonePop 2s ease-out forwards; pointer-events:none; z-index:25; }
+  .milestone-value { font-size:48px; color:#FFD700; font-family:var(--font-display); text-shadow:3px 3px 6px rgba(0,0,0,0.6); }
+  .milestone-label { font-size:16px; color:#fff; font-family:var(--font-body); text-shadow:2px 2px 4px rgba(0,0,0,0.5); letter-spacing:3px; }
+  @keyframes milestonePop { 0%{transform:translateX(-50%) scale(0.3);opacity:0} 15%{transform:translateX(-50%) scale(1.1);opacity:1} 25%{transform:translateX(-50%) scale(1)} 75%{opacity:1} 100%{transform:translateX(-50%) translateY(-30px);opacity:0} }
+
+  #hud-speed { position:absolute; bottom:20px; right:16px; width:100px; height:12px; background:rgba(0,0,0,0.4); border-radius:6px; overflow:hidden; z-index:10; }
+  #speed-fill { height:100%; background:linear-gradient(90deg,#44DD66,#FFD700,#FF3344); border-radius:6px; width:0%; transition:width 0.3s; }
+  #hud-multiplier { position:absolute; top:50px; right:16px; color:#FFD700; font-family:var(--font-display); font-size:14px; text-shadow:1px 1px 3px rgba(0,0,0,0.7); z-index:10; }
+
+  .coin-bump { animation: coinBump 0.2s ease-out; }
+  @keyframes coinBump { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
+
+  .new-highscore { color:#FFD700; font-size:28px; font-family:var(--font-display); text-shadow:0 0 15px rgba(255,215,0,0.6); animation: hsBlink 0.6s ease-in-out infinite alternate; margin-bottom:10px; }
+  @keyframes hsBlink { 0%{opacity:0.7} 100%{opacity:1} }
+
+  .game-btn {
+    font-family: var(--font-display);
+    font-size: 24px;
+    color: white;
+    text-shadow: var(--text-shadow);
+    background: var(--btn-primary);
+    border: var(--btn-border);
+    border-radius: var(--border-radius);
+    padding: 14px 36px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.3);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .game-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 0 rgba(0,0,0,0.3); }
+  .game-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.3); }
+  .game-btn.secondary { background: var(--blue); }
+  .game-btn.large { font-size: 32px; padding: 18px 48px; border-radius: var(--border-radius-lg); }
+  .game-btn.pulse { animation: btnPulse 1.5s ease-in-out infinite; }
+  @keyframes btnPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+
+  .coin-flash {
+    position: absolute; inset: 0; pointer-events: none; z-index: 7;
+    background: radial-gradient(circle at 50% 50%, rgba(255,215,0,0.25) 0%, transparent 70%);
+    animation: coinFlashAnim 0.25s ease-out forwards;
+  }
+  @keyframes coinFlashAnim { 0%{opacity:1} 100%{opacity:0} }
+
+  @media (max-width: 480px) {
+    #screen-title h1:first-child { font-size: 48px !important; }
+    #screen-title h1:last-child { font-size: 60px !important; }
+    .game-btn { font-size: 20px; padding: 12px 28px; }
+    .game-btn.large { font-size: 26px; padding: 14px 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="blackout" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#000;z-index:50;pointer-events:none;opacity:0;transition:opacity 0.2s;display:none;"></div>
+
+<div id="screen-title" style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:40;background:linear-gradient(180deg,transparent 0%,rgba(0,0,0,0.3) 60%,rgba(0,0,0,0.6) 100%);pointer-events:auto;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <h1 style="font-family:var(--font-display);font-size:72px;color:var(--yellow);text-shadow:var(--text-shadow-heavy);margin:0;line-height:0.9;">SOAPBOX</h1>
+    <h1 style="font-family:var(--font-display);font-size:88px;color:var(--red);text-shadow:var(--text-shadow-heavy);margin:0;margin-top:-8px;">RACE!</h1>
+  </div>
+  <button id="tap-to-start" class="game-btn large pulse" onclick="startFromTitle()">TAP TO START</button>
+  <div style="display:flex;gap:32px;margin-top:40px;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <span style="font-size:24px;">&#127942;</span>
+      <span style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:2px;">High Score</span>
+      <span id="title-highscore" style="font-family:var(--font-display);font-size:28px;color:white;text-shadow:var(--text-shadow);">0</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <span style="font-size:24px;">&#129689;</span>
+      <span style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:2px;">Total Coins</span>
+      <span id="title-coins" style="font-family:var(--font-display);font-size:28px;color:white;text-shadow:var(--text-shadow);">0</span>
+    </div>
+  </div>
+</div>
+
+<div id="hud" style="display:none;">
+  <div class="hud-item" id="hud-distance">&#127937; 0 m</div>
+  <div class="hud-item" id="hud-score">&#11088; 0</div>
+  <div class="hud-item" id="hud-coins">&#129689; 0</div>
+  <button id="hud-pause" style="pointer-events:auto;font-size:22px;background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;color:white;-webkit-tap-highlight-color:transparent;" onclick="togglePause()">&#9208;</button>
+</div>
+<div id="hud-speed" style="display:none;"><div id="speed-fill"></div></div>
+<div id="hud-multiplier" style="display:none;">x1.00</div>
+<div id="vignette" style="position:absolute;inset:0;pointer-events:none;z-index:4;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,0.3) 100%);opacity:0;transition:opacity 0.5s;"></div>
+<div id="speed-lines" style="position:absolute;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity 0.5s;background:radial-gradient(ellipse at center,transparent 40%,rgba(255,255,255,0.03) 60%,rgba(255,255,255,0.08) 80%,rgba(255,255,255,0.15) 100%);transform:scaleY(2.5);"></div>
+<div id="boost-overlay" style="position:absolute;inset:0;pointer-events:none;z-index:6;opacity:0;transition:opacity 0.3s;background:radial-gradient(ellipse at center,transparent 50%,rgba(0,220,255,0.1) 70%,rgba(0,220,255,0.25) 100%);"></div>
+<div id="effects-layer" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:15;"></div>
+
+<div id="countdown-overlay" style="display:none;">
+  <div id="countdown-text">3</div>
+</div>
+
+<div id="screen-pause" style="position:absolute;top:0;left:0;right:0;bottom:0;display:none;justify-content:center;align-items:center;z-index:35;">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);"></div>
+  <div style="position:relative;z-index:1;background:var(--bg-card-solid);border-radius:var(--border-radius-lg);padding:32px 40px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,0.5);">
+    <h2 style="font-family:var(--font-display);font-size:48px;color:white;text-shadow:var(--text-shadow-heavy);margin:0 0 24px 0;">PAUSED</h2>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <button class="game-btn" onclick="resumeGame()">RESUME</button>
+      <button class="game-btn secondary" onclick="quitToTitle()">QUIT</button>
+    </div>
+  </div>
+</div>
+
+<div id="gameover-overlay">
+  <div id="gameover-card">
+    <h1>WIPEOUT!</h1>
+    <div id="go-highscore-badge" class="new-highscore" style="display:none;">NEW HIGH SCORE!</div>
+    <div class="stat-row">
+      <span class="stat-label">DISTANCE</span>
+      <span class="stat-value" id="go-distance">0 m</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">SCORE</span>
+      <span class="stat-value" id="go-score">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">COINS</span>
+      <span class="stat-value" id="go-coins">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">NEAR MISSES</span>
+      <span class="stat-value" id="go-nearmisses">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">STYLE</span>
+      <span class="stat-value" id="go-style">x1.00</span>
+    </div>
+    <div class="stat-row" style="margin-top:10px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;">
+      <span class="stat-label">HIGH SCORE</span>
+      <span class="stat-value" id="go-highscore">0</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:24px;">
+      <button class="game-btn large pulse" onclick="restartGame()">RACE AGAIN</button>
+      <button class="game-btn secondary" onclick="showGarage()">GARAGE</button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-garage" style="position:absolute;top:0;left:0;right:0;bottom:0;display:none;z-index:40;pointer-events:auto;">
+  <!-- Back button -->
+  <button onclick="quitToTitle()" style="position:absolute;top:16px;left:16px;z-index:2;background:rgba(255,255,255,0.12);border:2px solid rgba(255,255,255,0.2);border-radius:12px;color:white;font-family:var(--font-body);font-size:14px;padding:8px 16px;cursor:pointer;">&#8592; BACK</button>
+
+  <!-- Vehicle name -->
+  <div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:2;">
+    <input id="garage-vehicle-name" type="text" value="My Soapbox" maxlength="20" oninput="garageSetName(this.value)" style="background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.2);border-radius:10px;color:white;font-family:var(--font-display);font-size:20px;text-align:center;padding:6px 16px;outline:none;width:200px;">
+  </div>
+
+  <!-- Part picker panel (right side) -->
+  <div style="position:absolute;top:60px;right:12px;bottom:80px;width:240px;z-index:2;display:flex;flex-direction:column;gap:8px;overflow:hidden;">
+    <!-- Tabs -->
+    <div style="display:flex;flex-wrap:wrap;gap:4px;">
+      <button class="garage-tab" data-tab="chassis" onclick="garageSelectTab('chassis')" style="flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:2px solid #FFD700;background:rgba(255,215,0,0.3);color:white;font-family:var(--font-body);font-size:11px;cursor:pointer;text-transform:uppercase;">Chassis</button>
+      <button class="garage-tab" data-tab="wheels" onclick="garageSelectTab('wheels')" style="flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:white;font-family:var(--font-body);font-size:11px;cursor:pointer;text-transform:uppercase;">Wheels</button>
+      <button class="garage-tab" data-tab="top" onclick="garageSelectTab('top')" style="flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:white;font-family:var(--font-body);font-size:11px;cursor:pointer;text-transform:uppercase;">Top</button>
+      <button class="garage-tab" data-tab="side" onclick="garageSelectTab('side')" style="flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:white;font-family:var(--font-body);font-size:11px;cursor:pointer;text-transform:uppercase;">Side</button>
+      <button class="garage-tab" data-tab="front" onclick="garageSelectTab('front')" style="flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:white;font-family:var(--font-body);font-size:11px;cursor:pointer;text-transform:uppercase;">Front</button>
+      <button class="garage-tab" data-tab="back" onclick="garageSelectTab('back')" style="flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:white;font-family:var(--font-body);font-size:11px;cursor:pointer;text-transform:uppercase;">Back</button>
+      <button class="garage-tab" data-tab="helmet" onclick="garageSelectTab('helmet')" style="flex:1;min-width:60px;padding:6px 4px;border-radius:8px;border:2px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:white;font-family:var(--font-body);font-size:11px;cursor:pointer;text-transform:uppercase;">Helmet</button>
+    </div>
+    <!-- Part grid -->
+    <div id="garage-part-grid" style="display:flex;flex-wrap:wrap;gap:2px;overflow-y:auto;flex:1;align-content:flex-start;"></div>
+    <!-- Color picker -->
+    <div id="garage-color-picker" style="display:none;flex-direction:column;gap:6px;">
+      <div style="color:rgba(255,255,255,0.6);font-family:var(--font-body);font-size:11px;text-transform:uppercase;letter-spacing:1px;">Color</div>
+      <div id="garage-color-swatches" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+  </div>
+
+  <!-- Stats bars (bottom-left) -->
+  <div style="position:absolute;bottom:16px;left:16px;z-index:2;background:rgba(0,0,0,0.4);border-radius:12px;padding:12px 16px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="color:#FF3344;font-family:var(--font-body);font-size:12px;font-weight:800;width:32px;">SPD</span>
+      <div id="garage-stat-spd" style="display:flex;"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <span style="color:#4488FF;font-family:var(--font-body);font-size:12px;font-weight:800;width:32px;">HDL</span>
+      <div id="garage-stat-hdl" style="display:flex;"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="color:#FFD700;font-family:var(--font-body);font-size:12px;font-weight:800;width:32px;">STY</span>
+      <div id="garage-stat-sty" style="display:flex;"></div>
+    </div>
+  </div>
+
+  <!-- RACE button (bottom-right) -->
+  <button class="game-btn large pulse" onclick="startRaceFromGarage()" style="position:absolute;bottom:16px;right:16px;z-index:2;">RACE!</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+  // ===================== CONSTANTS =====================
+  const SEGMENT_LENGTH = 12;
+  const VISIBLE_SEGMENTS = 8;
+  const ROAD_WIDTH = 7.0;
+  const LANE_WIDTH = 1.8;
+  const LANES = [-1.8, 0, 1.8];
+  const BASE_SPEED = 8;
+  const SPAWN_DISTANCE = 60;
+  const MIN_ROW_GAP_BASE = 12;
+  const CAM_OFFSET = new THREE.Vector3(0, 3.0, 5.5);
+  const CAM_LOOK_AHEAD = new THREE.Vector3(0, 0.5, -8);
+  const PLAYER_HITBOX = new THREE.Vector3(0.8, 0.7, 0.9);
+  const MAX_DT = 0.05;
+
+  const OBSTACLE_HITBOXES = {
+    barrel: new THREE.Vector3(0.6, 0.8, 0.6),
+    cone: new THREE.Vector3(0.4, 0.6, 0.4),
+    hay_bale: new THREE.Vector3(1.2, 0.8, 0.8),
+    ramp: new THREE.Vector3(1.2, 0.5, 1.0),
+    pothole: new THREE.Vector3(1.0, 0.05, 1.0),
+    tire_stack: new THREE.Vector3(0.7, 1.0, 0.7),
+    barrier: new THREE.Vector3(1.5, 0.9, 0.3),
+    trash_can: new THREE.Vector3(0.5, 0.7, 0.5)
+  };
+  const OBSTACLE_COLORS = {
+    barrel: 0xFF6633,
+    cone: 0xFF8800,
+    hay_bale: 0xDDBB44,
+    ramp: 0x44DD66,
+    pothole: 0x333333,
+    tire_stack: 0x333333,
+    barrier: 0xFF4444,
+    trash_can: 0x888888
+  };
+
+  const PATTERNS_EASY = [
+    [true, false, false],
+    [false, true, false],
+    [false, false, true]
+  ];
+  const PATTERNS_MEDIUM = [
+    [true, true, false],
+    [true, false, true],
+    [false, true, true]
+  ];
+  var PATTERNS_SEQUENCE = [
+    { rows: [[false,true,true],[true,true,false]], gap: 1.0 },
+    { rows: [[true,false,false],[false,false,true]], gap: 1.0 },
+    { rows: [[false,true,true],[true,true,false],[false,true,true]], gap: 0.8 }
+  ];
+
+  var SPEED_TABLE = { 0: 7.0, 100: 8.5, 300: 10.0, 600: 11.5, 1000: 13.0, 1500: 14.0, 2000: 15.0 };
+  var SPEED_TABLE_KEYS = [0, 100, 300, 600, 1000, 1500, 2000];
+  var COLLECTIBLE_HITBOX = new THREE.Vector3(0.6, 0.6, 0.6);
+
+  // ===================== STATE =====================
+  var currentMode = 'title';
+  var isPaused = false;
+  let gameState = 'loading';
+  let score = 0;
+  let distance = 0;
+  let coins = 0;
+  let scrollSpeed = BASE_SPEED * 0.5;
+  let currentLane = 1;
+  let targetX = 0;
+  let playerX = 0;
+  let isSwitching = false;
+  let switchStartTime = 0;
+  let switchStartX = 0;
+  let switchDuration = 200;
+  let distanceSinceLastSpawn = 0;
+  let countdownStartTime = 0;
+  let gameoverTime = 0;
+  let gameoverShown = false;
+  let activeObstacles = [];
+  let activeCollectibles = [];
+  let lastTime = 0;
+  let nearMisses = 0;
+  let styleMultiplier = 1.0;
+  let isBoosted = false;
+  let boostEndTime = 0;
+  var BOOST_DURATION = 2000;
+  var BOOST_MULTIPLIER = 1.5;
+  let lastMilestone = 0;
+  let sequenceQueue = [];
+  var isJumping = false;
+  var jumpStartTime = 0;
+  var jumpDuration = 1000;
+  var jumpHeight = 2.0;
+  var frameCounter = 0;
+  var lastSpawnedTypes = [];
+
+  // ===================== VEHICLE DATA MODEL =====================
+  var DEFAULT_VEHICLE = {
+    chassis: { type: 'bathtub', color: '#FF4444' },
+    wheels: { type: 'chunky', color: '#333333' },
+    decorations: { top: null, side: null, front: null, back: null },
+    driver: { helmet: 'classic', helmetColor: '#2244FF' },
+    name: 'My Soapbox'
+  };
+  var vehicleData = JSON.parse(JSON.stringify(DEFAULT_VEHICLE));
+
+  var CHASSIS_DIMS = {
+    bathtub: { w:1.2, h:0.5, d:0.7 },
+    rocket:  { w:1.6, h:0.4, d:0.5 },
+    shoe:    { w:1.3, h:0.6, d:0.7 },
+    box:     { w:1.0, h:0.5, d:0.6 },
+    banana:  { w:1.5, h:0.5, d:0.5 },
+    couch:   { w:1.1, h:0.6, d:0.7 }
+  };
+  var WHEEL_RADIUS = {
+    chunky: 0.18, skinny: 0.22, monster: 0.28, wagon: 0.20, roller: 0.10
+  };
+  var CHASSIS_WHEELS = {
+    bathtub: [{x:-0.35,z:-0.25},{x:0.35,z:-0.25},{x:-0.35,z:0.25},{x:0.35,z:0.25}],
+    rocket:  [{x:-0.30,z:-0.35},{x:0.30,z:-0.35},{x:-0.30,z:0.35},{x:0.30,z:0.35}],
+    shoe:    [{x:-0.38,z:-0.25},{x:0.38,z:-0.25},{x:-0.38,z:0.25},{x:0.38,z:0.25}],
+    box:     [{x:-0.32,z:-0.22},{x:0.32,z:-0.22},{x:-0.32,z:0.22},{x:0.32,z:0.22}],
+    banana:  [{x:-0.35,z:-0.35},{x:0.35,z:-0.35},{x:-0.35,z:0.35},{x:0.35,z:0.35}],
+    couch:   [{x:-0.33,z:-0.25},{x:0.33,z:-0.25},{x:-0.33,z:0.25},{x:0.33,z:0.25}]
+  };
+  var CHASSIS_DECOS = {
+    bathtub: { top:{x:0,y:0.55,z:0}, side:{x:0.62,y:0.25,z:0}, front:{x:0,y:0.25,z:-0.38}, back:{x:0,y:0.25,z:0.38} },
+    rocket:  { top:{x:0,y:0.45,z:0}, side:{x:0.27,y:0.2,z:0}, front:{x:0,y:0.2,z:-0.55}, back:{x:0,y:0.2,z:0.55} },
+    shoe:    { top:{x:0,y:0.65,z:0}, side:{x:0.38,y:0.3,z:0}, front:{x:0,y:0.3,z:-0.38}, back:{x:0,y:0.3,z:0.38} },
+    box:     { top:{x:0,y:0.55,z:0}, side:{x:0.52,y:0.25,z:0}, front:{x:0,y:0.25,z:-0.33}, back:{x:0,y:0.25,z:0.33} },
+    banana:  { top:{x:0,y:0.55,z:0}, side:{x:0.27,y:0.25,z:0}, front:{x:0,y:0.25,z:-0.45}, back:{x:0,y:0.25,z:0.45} },
+    couch:   { top:{x:0,y:0.65,z:0}, side:{x:0.38,y:0.3,z:0}, front:{x:0,y:0.3,z:-0.38}, back:{x:0,y:0.3,z:0.38} }
+  };
+
+  var CHASSIS_STATS = {
+    bathtub:{spd:3,hdl:3,sty:3}, rocket:{spd:5,hdl:2,sty:4}, shoe:{spd:2,hdl:4,sty:5},
+    box:{spd:3,hdl:4,sty:1}, banana:{spd:4,hdl:2,sty:5}, couch:{spd:2,hdl:3,sty:4}
+  };
+  var WHEEL_STATS = {
+    chunky:{spd:0,hdl:0,sty:0}, skinny:{spd:1,hdl:1,sty:0}, monster:{spd:-1,hdl:-1,sty:1},
+    wagon:{spd:0,hdl:1,sty:1}, roller:{spd:1,hdl:0,sty:-1}
+  };
+  var DECO_STATS = {
+    top:   { flag:{sty:1}, antenna:{hdl:1}, propeller:{spd:1}, crown:{sty:1}, fin:{spd:1} },
+    side:  { sticker:{sty:1}, stripe:{spd:1}, flame:{spd:1}, number:{hdl:1}, lightning:{sty:1} },
+    front: { bumper:{hdl:1}, teeth:{sty:1}, eyes:{sty:1}, headlight:{hdl:1}, horn:{spd:1} },
+    back:  { exhaust:{spd:1}, parachute:{hdl:1}, tailflag:{sty:1}, jetpack:{spd:1} }
+  };
+
+  var VEHICLE_COLORS = [
+    '#FF3344','#FF8800','#FFD700','#88DD00','#44DD66','#00DDEE',
+    '#4488FF','#AA44FF','#FF44AA','#FFFFFF','#222222','#FFB347',
+    '#C0C0C0','#FF6B6B','#20B2AA','#CD7F32'
+  ];
+
+  function calculateStats(vd) {
+    var base = CHASSIS_STATS[vd.chassis.type];
+    var wmod = WHEEL_STATS[vd.wheels.type];
+    var spd = base.spd + wmod.spd, hdl = base.hdl + wmod.hdl, sty = base.sty + wmod.sty;
+    ['top','side','front','back'].forEach(function(slot) {
+      var decoType = vd.decorations[slot];
+      if (decoType && DECO_STATS[slot][decoType]) {
+        var d = DECO_STATS[slot][decoType];
+        if (d.spd) spd += d.spd; if (d.hdl) hdl += d.hdl; if (d.sty) sty += d.sty;
+      }
+    });
+    return { spd: Math.max(1,Math.min(5,spd)), hdl: Math.max(1,Math.min(5,hdl)), sty: Math.max(1,Math.min(5,sty)) };
+  }
+
+  var speedStatMultiplier = 1.0;
+
+  // ===================== PERSISTENCE =====================
+  function saveVehicle() {
+    localStorage.setItem('soapbox:vehicle', JSON.stringify(vehicleData));
+  }
+  function loadVehicle() {
+    try {
+      var saved = localStorage.getItem('soapbox:vehicle');
+      if (saved) vehicleData = JSON.parse(saved);
+    } catch(e) {}
+  }
+
+  var saveVehicleTimer = null;
+  function saveVehicleDebounced() {
+    if (saveVehicleTimer) clearTimeout(saveVehicleTimer);
+    saveVehicleTimer = setTimeout(saveVehicle, 300);
+  }
+
+  // DOM refs
+  const hudEl = document.getElementById('hud');
+  const hudDistance = document.getElementById('hud-distance');
+  const hudScore = document.getElementById('hud-score');
+  const hudCoins = document.getElementById('hud-coins');
+  const countdownOverlay = document.getElementById('countdown-overlay');
+  const countdownText = document.getElementById('countdown-text');
+  const gameoverOverlay = document.getElementById('gameover-overlay');
+  const goDistance = document.getElementById('go-distance');
+  const goScore = document.getElementById('go-score');
+  const goCoins = document.getElementById('go-coins');
+  const goNearMisses = document.getElementById('go-nearmisses');
+  const goStyle = document.getElementById('go-style');
+  const goHighscore = document.getElementById('go-highscore');
+  const goHighscoreBadge = document.getElementById('go-highscore-badge');
+  const speedFill = document.getElementById('speed-fill');
+  const hudSpeed = document.getElementById('hud-speed');
+  const hudMultiplier = document.getElementById('hud-multiplier');
+  const effectsLayer = document.getElementById('effects-layer');
+
+  // ===================== RENDERER & SCENE =====================
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.NoToneMapping;
+  document.body.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x87CEEB);
+  scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
+
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(3, 5, 8);
+
+  // ===================== TOON SHADING =====================
+  function createGradientMap3() {
+    const data = new Uint8Array([0,0,0, 140,140,140, 255,255,255]);
+    const tex = new THREE.DataTexture(data, 3, 1, THREE.RGBFormat);
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function createGradientMap5() {
+    const data = new Uint8Array([0,0,0, 64,64,64, 128,128,128, 192,192,192, 255,255,255]);
+    const tex = new THREE.DataTexture(data, 5, 1, THREE.RGBFormat);
+    tex.minFilter = THREE.NearestFilter;
+    tex.magFilter = THREE.NearestFilter;
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  const GRADIENT_MAPS = {
+    standard: createGradientMap3(),
+    soft: createGradientMap5()
+  };
+
+  function createToonMaterial(color, gradientType) {
+    gradientType = gradientType || 'standard';
+    return new THREE.MeshToonMaterial({
+      color: color,
+      gradientMap: GRADIENT_MAPS[gradientType]
+    });
+  }
+
+  function addOutline(object, thickness) {
+    thickness = thickness !== undefined ? thickness : 0.03;
+    var children = [];
+    object.traverse(function(child) {
+      if (child.isMesh && !child.userData.isOutline && !child.userData.noOutline) {
+        children.push(child);
+      }
+    });
+    for (var i = 0; i < children.length; i++) {
+      var child = children[i];
+      var outlineMesh = child.clone();
+      outlineMesh.material = new THREE.MeshBasicMaterial({
+        color: 0x222222,
+        side: THREE.BackSide
+      });
+      outlineMesh.scale.multiplyScalar(1 + thickness);
+      outlineMesh.castShadow = false;
+      outlineMesh.receiveShadow = false;
+      outlineMesh.userData.isOutline = true;
+      outlineMesh.renderOrder = -1;
+      child.parent.add(outlineMesh);
+    }
+  }
+
+  // ===================== LIGHTING MODES =====================
+  function setupTitleLighting() {
+    scene.background = new THREE.Color(0x3A6EA5);
+    scene.fog = new THREE.Fog(0x3A6EA5, 8, 25);
+  }
+  function setupRaceLighting() {
+    scene.background = new THREE.Color(0x87CEEB);
+    scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
+    ambientLight.color.set(0xFFF4E0);
+    ambientLight.intensity = 0.5;
+    sunLight.intensity = 0.9;
+    sunLight.position.set(4, 10, 5);
+    hemiLight.intensity = 0.35;
+  }
+  function setupGarageLighting() {
+    scene.background = new THREE.Color(0x1E1E2E);
+    scene.fog = new THREE.Fog(0x1E1E2E, 8, 25);
+    ambientLight.color.set(0xFFF4E0);
+    ambientLight.intensity = 0.35;
+    sunLight.intensity = 1.0;
+    sunLight.position.set(0, 5, 2);
+    hemiLight.intensity = 0.15;
+  }
+
+  // ===================== LIGHTING =====================
+  const ambientLight = new THREE.AmbientLight(0xFFF4E0, 0.5);
+  scene.add(ambientLight);
+
+  const sunLight = new THREE.DirectionalLight(0xFFF4E0, 0.9);
+  sunLight.position.set(4, 10, 5);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.shadow.camera.near = 1;
+  sunLight.shadow.camera.far = 40;
+  sunLight.shadow.camera.left = -8;
+  sunLight.shadow.camera.right = 8;
+  sunLight.shadow.camera.top = 15;
+  sunLight.shadow.camera.bottom = -5;
+  sunLight.shadow.bias = -0.001;
+  scene.add(sunLight);
+  scene.add(sunLight.target);
+
+  const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0xB97A20, 0.35);
+  scene.add(hemiLight);
+
+  const fillLight = new THREE.DirectionalLight(0x88BBFF, 0.15);
+  fillLight.position.set(-3, 5, 2);
+  scene.add(fillLight);
+
+  // ===================== TRACK =====================
+  var segmentPool = [];
+  var scrollOffset = 0;
+
+  // ===================== BUILDING ROW SYSTEM =====================
+  var BUILDING_COLORS = [0xDDBB88, 0xCC8866, 0xEEAA77, 0xBB9977, 0xDD9988, 0xAABBCC, 0xCCBB99, 0xE8C8A0, 0xBBA488, 0xD4A574];
+  var ROOF_COLORS = [0xCC4444, 0x5577AA, 0x886644, 0x668855, 0xAA5533];
+  var AWNING_COLORS = [0xCC3333, 0x3366AA, 0x44AA55, 0xDD8800, 0xAA44AA];
+  var WIN_DARK_MAT = new THREE.MeshBasicMaterial({ color: 0x445566 });
+  var WIN_LIT_MAT = new THREE.MeshBasicMaterial({ color: 0xFFEEAA });
+  var WIN_GEO = new THREE.PlaneGeometry(0.4, 0.55);
+
+  function createBuildingRow(side, segLen) {
+    var group = new THREE.Group();
+    var xBase = side * (ROAD_WIDTH / 2 + 2.0);
+    var z = -segLen / 2;
+
+    while (z < segLen / 2 - 0.5) {
+      var w = 1.8 + Math.random() * 2.5;
+      var h = 3 + Math.random() * 5;
+      var d = 2.5 + Math.random() * 1.5;
+      var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+
+      // Main building body
+      var buildGeo = new THREE.BoxGeometry(d, h, w);
+      var buildMat = createToonMaterial(color);
+      var building = new THREE.Mesh(buildGeo, buildMat);
+      building.position.set(xBase + side * d / 2, h / 2, z + w / 2);
+      building.castShadow = true;
+      building.userData.noOutline = true;
+      group.add(building);
+
+      // Colored roof accent
+      var roofColor = ROOF_COLORS[Math.floor(Math.random() * ROOF_COLORS.length)];
+      var roofGeo = new THREE.BoxGeometry(d + 0.15, 0.2, w + 0.15);
+      var roof = new THREE.Mesh(roofGeo, createToonMaterial(roofColor));
+      roof.position.set(xBase + side * d / 2, h + 0.1, z + w / 2);
+      roof.userData.noOutline = true;
+      group.add(roof);
+
+      // Windows on the road-facing side
+      var winRows = Math.max(1, Math.floor((h - 1) / 1.2));
+      var winCols = Math.max(1, Math.floor(w / 1.0));
+
+      for (var wy = 0; wy < winRows; wy++) {
+        for (var wz = 0; wz < winCols; wz++) {
+          var win = new THREE.Mesh(WIN_GEO, Math.random() < 0.35 ? WIN_LIT_MAT : WIN_DARK_MAT);
+          var winX = xBase - side * 0.01;
+          win.position.set(winX, 1.2 + wy * 1.2, z + 0.5 + wz * 1.0);
+          if (side < 0) win.rotation.y = Math.PI;
+          win.userData.noOutline = true;
+          group.add(win);
+        }
+      }
+
+      // Ground-level awning (40% chance)
+      if (Math.random() < 0.4) {
+        var awColor = AWNING_COLORS[Math.floor(Math.random() * AWNING_COLORS.length)];
+        var awGeo = new THREE.BoxGeometry(0.8, 0.05, w * 0.6);
+        var awn = new THREE.Mesh(awGeo, createToonMaterial(awColor));
+        awn.position.set(xBase - side * 0.3, 1.8, z + w / 2);
+        awn.rotation.z = side * 0.15;
+        awn.userData.noOutline = true;
+        group.add(awn);
+      }
+
+      // Lamppost (20% chance per building)
+      if (Math.random() < 0.2) {
+        var pole = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.03, 0.04, 2.5, 6),
+          createToonMaterial(0x444444)
+        );
+        pole.position.set(xBase - side * 1.5, 1.25, z + w / 2);
+        pole.userData.noOutline = true;
+        group.add(pole);
+        var lamp = new THREE.Mesh(
+          new THREE.SphereGeometry(0.1, 6, 4),
+          new THREE.MeshBasicMaterial({ color: 0xFFDD66 })
+        );
+        lamp.position.set(xBase - side * 1.5, 2.6, z + w / 2);
+        lamp.userData.noOutline = true;
+        group.add(lamp);
+      }
+
+      z += w + 0.15;
+    }
+
+    return group;
+  }
+
+  function createSegment() {
+    var group = new THREE.Group();
+
+    // Road
+    var roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, SEGMENT_LENGTH);
+    roadGeo.rotateX(-Math.PI / 2);
+    var road = new THREE.Mesh(roadGeo, createToonMaterial(0x555566));
+    road.receiveShadow = true;
+    group.add(road);
+
+    // Curbs
+    var curbGeo = new THREE.BoxGeometry(0.3, 0.1, SEGMENT_LENGTH);
+    var curbMat = createToonMaterial(0xCC3333);
+    var leftCurb = new THREE.Mesh(curbGeo, curbMat);
+    leftCurb.position.set(-(ROAD_WIDTH / 2 + 0.15), 0.05, 0);
+    group.add(leftCurb);
+    var rightCurb = new THREE.Mesh(curbGeo, curbMat);
+    rightCurb.position.set(ROAD_WIDTH / 2 + 0.15, 0.05, 0);
+    group.add(rightCurb);
+
+    // Lane dividers (dashed)
+    var divGeo = new THREE.PlaneGeometry(0.12, 1.5);
+    divGeo.rotateX(-Math.PI / 2);
+    var divMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    var dashCount = Math.floor(SEGMENT_LENGTH / 3);
+    for (var d = 0; d < dashCount; d++) {
+      var zPos = -SEGMENT_LENGTH / 2 + d * 3 + 1.5;
+      // Left divider
+      var divL = new THREE.Mesh(divGeo, divMat);
+      divL.position.set(-LANE_WIDTH * 0.5, 0.005, zPos);
+      group.add(divL);
+      // Right divider
+      var divR = new THREE.Mesh(divGeo, divMat);
+      divR.position.set(LANE_WIDTH * 0.5, 0.005, zPos);
+      group.add(divR);
+    }
+
+    // Sidewalks
+    var swGeo = new THREE.PlaneGeometry(2.0, SEGMENT_LENGTH);
+    swGeo.rotateX(-Math.PI / 2);
+    var swMat = createToonMaterial(0xBBBBAA);
+    var leftSW = new THREE.Mesh(swGeo, swMat);
+    leftSW.position.set(-(ROAD_WIDTH / 2 + 1.0), 0.0, 0);
+    leftSW.receiveShadow = true;
+    group.add(leftSW);
+    var rightSW = new THREE.Mesh(swGeo, swMat);
+    rightSW.position.set(ROAD_WIDTH / 2 + 1.0, 0.0, 0);
+    rightSW.receiveShadow = true;
+    group.add(rightSW);
+
+    // Building rows
+    group.add(createBuildingRow(-1, SEGMENT_LENGTH));
+    group.add(createBuildingRow(1, SEGMENT_LENGTH));
+
+    return group;
+  }
+
+  function initTrack() {
+    var totalSegments = VISIBLE_SEGMENTS + 2;
+    for (var i = 0; i < totalSegments; i++) {
+      var seg;
+      if (segmentPool.length > i) {
+        seg = segmentPool[i];
+      } else {
+        seg = createSegment();
+        segmentPool.push(seg);
+        scene.add(seg);
+      }
+      seg.position.z = -i * SEGMENT_LENGTH;
+      seg.visible = true;
+    }
+  }
+
+  function updateTrack(dt) {
+    // Move all segments toward camera
+    for (var i = 0; i < segmentPool.length; i++) {
+      segmentPool[i].position.z += scrollSpeed * dt;
+    }
+    // Recycle segments that passed behind camera
+    for (var i = 0; i < segmentPool.length; i++) {
+      if (segmentPool[i].position.z > SEGMENT_LENGTH) {
+        // Find current furthest segment
+        var minZ = Infinity;
+        for (var j = 0; j < segmentPool.length; j++) {
+          if (segmentPool[j].position.z < minZ) minZ = segmentPool[j].position.z;
+        }
+        var newZ = minZ - SEGMENT_LENGTH;
+        segmentPool[i].position.z = newZ;
+        spawnSceneryForZ(newZ);
+      }
+    }
+  }
+
+  // ===================== PLAYER VEHICLE =====================
+  var playerGroup = new THREE.Group();
+  var vehicleGroup = new THREE.Group();
+  var wheels = [];
+
+  function buildPlaceholderDeco(slot, type) {
+    var group = new THREE.Group();
+    var colors = {
+      flag:0xFF3344, antenna:0xCCCCCC, propeller:0x88BBFF, crown:0xFFD700, fin:0x888888,
+      sticker:0xFF8800, stripe:0xFFFFFF, flame:0xFF4400, number:0xFFFFFF, lightning:0xFFDD00,
+      bumper:0xCCCCCC, teeth:0xFFFFFF, eyes:0xFFFFFF, headlight:0xFFDD44, horn:0xEEDDCC,
+      exhaust:0x888888, parachute:0xFF4444, tailflag:0x44DD66, jetpack:0xFF8800
+    };
+    var c = colors[type] || 0xFFFFFF;
+
+    if (type === 'flag' || type === 'tailflag') {
+      var stick = new THREE.Mesh(new THREE.CylinderGeometry(0.01,0.01,0.25,4), createToonMaterial(0x666666));
+      stick.position.y = 0.12;
+      group.add(stick);
+      var flagMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.15,0.1), createToonMaterial(c));
+      flagMesh.material.side = THREE.DoubleSide;
+      flagMesh.position.set(0.08, 0.22, 0);
+      group.add(flagMesh);
+    } else if (type === 'crown') {
+      group.add(new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,0.08,5), createToonMaterial(c)));
+    } else if (type === 'propeller') {
+      var blade = new THREE.Mesh(new THREE.BoxGeometry(0.25,0.02,0.04), createToonMaterial(c));
+      blade.position.y = 0.05;
+      group.add(blade);
+    } else if (type === 'eyes') {
+      [-0.05,0.05].forEach(function(x) {
+        var eye = new THREE.Mesh(new THREE.SphereGeometry(0.04,8,8), createToonMaterial(0xFFFFFF));
+        eye.position.x = x;
+        group.add(eye);
+        var pupil = new THREE.Mesh(new THREE.SphereGeometry(0.02,6,6), createToonMaterial(0x111111));
+        pupil.position.set(x, 0, 0.03);
+        group.add(pupil);
+      });
+    } else if (type === 'teeth') {
+      for (var t = -0.08; t <= 0.08; t += 0.04) {
+        var tooth = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.06, 4), createToonMaterial(0xFFFFFF));
+        tooth.position.set(t, -0.02, 0);
+        tooth.rotation.x = Math.PI;
+        group.add(tooth);
+      }
+    } else if (type === 'exhaust' || type === 'jetpack') {
+      [-0.04, 0.04].forEach(function(x) {
+        var pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.025,0.12,8), createToonMaterial(c));
+        pipe.position.set(x, 0, 0);
+        pipe.rotation.x = Math.PI/2;
+        group.add(pipe);
+      });
+    } else {
+      group.add(new THREE.Mesh(new THREE.BoxGeometry(0.12,0.08,0.06), createToonMaterial(c)));
+    }
+    return group;
+  }
+
+  function assembleVehicle() {
+    while (vehicleGroup.children.length > 0) {
+      vehicleGroup.remove(vehicleGroup.children[0]);
+    }
+    wheels = [];
+
+    var cd = CHASSIS_DIMS[vehicleData.chassis.type];
+
+    // Chassis body
+    var chassisGeo = new THREE.BoxGeometry(cd.w, cd.h, cd.d);
+    var chassisMat = createToonMaterial(vehicleData.chassis.color, 'soft');
+    var chassis = new THREE.Mesh(chassisGeo, chassisMat);
+    chassis.position.y = cd.h / 2;
+    chassis.castShadow = true;
+    chassis.name = 'chassis';
+    vehicleGroup.add(chassis);
+
+    // Type-specific extras
+    if (vehicleData.chassis.type === 'rocket') {
+      var noseGeo = new THREE.ConeGeometry(cd.d/2, 0.4, 8);
+      noseGeo.rotateZ(-Math.PI/2);
+      var nose = new THREE.Mesh(noseGeo, chassisMat);
+      nose.position.set(0, cd.h/2, -cd.w/2 - 0.15);
+      nose.rotation.x = Math.PI/2;
+      vehicleGroup.add(nose);
+    } else if (vehicleData.chassis.type === 'banana') {
+      chassis.scale.y = 0.7;
+      chassis.rotation.z = 0.15;
+    }
+
+    // Wheels
+    var wr = WHEEL_RADIUS[vehicleData.wheels.type];
+    var wheelGeo = new THREE.CylinderGeometry(wr, wr, 0.12, 16);
+    wheelGeo.rotateZ(Math.PI/2);
+    var wheelMat = createToonMaterial(vehicleData.wheels.color);
+    var positions = CHASSIS_WHEELS[vehicleData.chassis.type];
+    for (var i = 0; i < 4; i++) {
+      var w = new THREE.Mesh(wheelGeo, wheelMat);
+      w.position.set(positions[i].x, wr, positions[i].z);
+      vehicleGroup.add(w);
+      wheels.push(w);
+    }
+
+    // Driver
+    var dBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.15,0.3,8), createToonMaterial(0x4488FF));
+    dBody.position.y = cd.h + 0.15;
+    vehicleGroup.add(dBody);
+    var helmet = new THREE.Mesh(new THREE.SphereGeometry(0.14,12,8), createToonMaterial(vehicleData.driver.helmetColor));
+    helmet.position.y = cd.h + 0.38;
+    helmet.name = 'helmet';
+    vehicleGroup.add(helmet);
+    var visor = new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6,0,Math.PI), createToonMaterial(0x222222));
+    visor.position.set(0, cd.h + 0.37, -0.08);
+    visor.rotation.x = -Math.PI*0.15;
+    vehicleGroup.add(visor);
+
+    // Decorations
+    var decoPoints = CHASSIS_DECOS[vehicleData.chassis.type];
+    ['top','side','front','back'].forEach(function(slot) {
+      var decoType = vehicleData.decorations[slot];
+      if (!decoType) return;
+      var deco = buildPlaceholderDeco(slot, decoType);
+      var pt = decoPoints[slot];
+      deco.position.set(pt.x, pt.y, pt.z);
+      deco.name = 'deco_' + slot;
+      vehicleGroup.add(deco);
+    });
+
+    // Outlines
+    addOutline(vehicleGroup, 0.035);
+
+    // Contact shadow
+    var shadowGeo = new THREE.CircleGeometry(0.7, 16);
+    shadowGeo.rotateX(-Math.PI/2);
+    var shadowMat = new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:0.15, depthWrite:false});
+    var cs = new THREE.Mesh(shadowGeo, shadowMat);
+    cs.position.y = 0.01;
+    cs.userData.noOutline = true;
+    vehicleGroup.add(cs);
+  }
+
+  function buildPlayer() {
+    assembleVehicle();
+    playerGroup.add(vehicleGroup);
+    playerGroup.position.set(0, 0, 0);
+    scene.add(playerGroup);
+  }
+
+  // ===================== LANE SWITCHING =====================
+  function switchLane(direction) {
+    var newLane = currentLane + direction;
+    if (newLane < 0) newLane = 0;
+    if (newLane > 2) newLane = 2;
+    if (newLane === currentLane) return;
+    // Allow interrupting mid-switch — snap current position and start new switch
+    currentLane = newLane;
+    targetX = LANES[currentLane];
+    switchStartTime = performance.now();
+    switchStartX = playerX; // start from wherever we are right now
+    isSwitching = true;
+  }
+
+  function updateLanePosition(now) {
+    if (!isSwitching) return;
+    var t = (now - switchStartTime) / switchDuration;
+    if (t > 1) t = 1;
+    // Ease in-out quad
+    var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    playerX = switchStartX + (targetX - switchStartX) * eased;
+    if (t >= 1) {
+      playerX = targetX;
+      isSwitching = false;
+    }
+    playerGroup.position.x = playerX;
+  }
+
+  // ===================== OBJECT POOL =====================
+  function ObjectPool(createFn, initialSize) {
+    this.createFn = createFn;
+    this.pool = [];
+    for (var i = 0; i < initialSize; i++) {
+      var obj = this.createFn();
+      obj.visible = false;
+      obj.position.set(0, -100, 0);
+      this.pool.push(obj);
+    }
+  }
+  ObjectPool.prototype.get = function() {
+    for (var i = 0; i < this.pool.length; i++) {
+      if (!this.pool[i].visible) {
+        return this.pool[i];
+      }
+    }
+    var obj = this.createFn();
+    this.pool.push(obj);
+    return obj;
+  };
+  ObjectPool.prototype.returnToPool = function(obj) {
+    obj.visible = false;
+    obj.position.set(0, -100, 0);
+  };
+
+  // ===================== OBSTACLES =====================
+  var obstaclePool;
+  var obstacleTypes = ['barrel', 'cone', 'hay_bale'];
+
+  function createPlaceholderObstacle(type) {
+    if (!type) type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+    var hb = OBSTACLE_HITBOXES[type];
+    var group = new THREE.Group();
+
+    if (type === 'ramp') {
+      // Bright green wedge — clearly different from obstacles
+      var geo = new THREE.BoxGeometry(1.4, 0.5, 1.2);
+      var mat = createToonMaterial(0x44DD66);
+      var mesh = new THREE.Mesh(geo, mat);
+      mesh.position.y = 0.15;
+      mesh.rotation.x = 0.3;
+      mesh.castShadow = true;
+      group.add(mesh);
+      // Large yellow arrow on top
+      var arrowGeo = new THREE.ConeGeometry(0.25, 0.5, 3);
+      arrowGeo.rotateX(-Math.PI/2);
+      var arrow = new THREE.Mesh(arrowGeo, createToonMaterial(0xFFDD00));
+      arrow.position.set(0, 0.5, -0.25);
+      group.add(arrow);
+      // Glowing base stripe
+      var stripe = new THREE.Mesh(
+        new THREE.BoxGeometry(1.4, 0.08, 1.2),
+        new THREE.MeshBasicMaterial({ color: 0x88FF88 })
+      );
+      stripe.position.y = 0.02;
+      stripe.userData.noOutline = true;
+      group.add(stripe);
+    } else if (type === 'pothole') {
+      var geo = new THREE.CylinderGeometry(0.5, 0.5, 0.03, 12);
+      var mat = createToonMaterial(0x333333);
+      var mesh = new THREE.Mesh(geo, mat);
+      mesh.position.y = 0.02;
+      group.add(mesh);
+    } else {
+      var geo = new THREE.BoxGeometry(hb.x, hb.y, hb.z);
+      var mat = createToonMaterial(OBSTACLE_COLORS[type]);
+      var mesh = new THREE.Mesh(geo, mat);
+      mesh.position.y = hb.y / 2;
+      mesh.castShadow = true;
+      group.add(mesh);
+    }
+
+    addOutline(group, 0.025);
+    group.userData.type = type;
+    group.userData.hitbox = hb;
+    return group;
+  }
+
+  function initObstacles() {
+    obstaclePool = new ObjectPool(function() {
+      var obj = createPlaceholderObstacle();
+      scene.add(obj);
+      return obj;
+    }, 20);
+  }
+
+  // ===================== COLLECTIBLES =====================
+  var coinPool, specialPool;
+
+  function createPlaceholderCoin() {
+    var group = new THREE.Group();
+    var geo = new THREE.CylinderGeometry(0.2, 0.2, 0.04, 12);
+    geo.rotateZ(Math.PI / 2);
+    var mat = createToonMaterial(0xFFDD00);
+    group.add(new THREE.Mesh(geo, mat));
+    addOutline(group, 0.02);
+    group.userData.collectType = 'coin';
+    return group;
+  }
+
+  function createPlaceholderSpecial() {
+    var group = new THREE.Group();
+    var geo = new THREE.OctahedronGeometry(0.25, 0);
+    var mat = createToonMaterial(0xFF44FF);
+    group.add(new THREE.Mesh(geo, mat));
+    addOutline(group, 0.02);
+    group.userData.collectType = 'star';
+    return group;
+  }
+
+  function initCollectibles() {
+    coinPool = new ObjectPool(function() {
+      var obj = createPlaceholderCoin();
+      scene.add(obj);
+      return obj;
+    }, 40);
+    specialPool = new ObjectPool(function() {
+      var obj = createPlaceholderSpecial();
+      scene.add(obj);
+      return obj;
+    }, 10);
+  }
+
+  function spawnCoinsForPattern(pattern, z) {
+    for (var lane = 0; lane < 3; lane++) {
+      if (!pattern[lane] && Math.random() < 0.6) {
+        var c = coinPool.get();
+        c.position.set(LANES[lane], 0.8, z);
+        c.visible = true;
+        c.userData.collectType = 'coin';
+        activeCollectibles.push(c);
+      }
+    }
+  }
+
+  function spawnSpecialForPattern(pattern, z) {
+    if (Math.random() < 0.05) {
+      var clearLanes = [];
+      for (var lane = 0; lane < 3; lane++) {
+        if (!pattern[lane]) clearLanes.push(lane);
+      }
+      if (clearLanes.length > 0) {
+        var chosen = clearLanes[Math.floor(Math.random() * clearLanes.length)];
+        var s = specialPool.get();
+        var specialType = Math.random() < 0.5 ? 'star' : 'boost';
+        s.userData.collectType = specialType;
+        s.position.set(LANES[chosen], 1.0, z - 2);
+        s.visible = true;
+        activeCollectibles.push(s);
+      }
+    }
+  }
+
+  function updateCollectibles(dt, time) {
+    for (var i = activeCollectibles.length - 1; i >= 0; i--) {
+      var item = activeCollectibles[i];
+      item.position.z += scrollSpeed * dt;
+      // Spin and bob
+      item.rotation.y = time * 0.003;
+      item.position.y = (item.userData.collectType === 'coin' ? 0.8 : 1.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
+      // Recycle
+      if (item.position.z > 15) {
+        if (item.userData.collectType === 'coin') coinPool.returnToPool(item);
+        else specialPool.returnToPool(item);
+        activeCollectibles.splice(i, 1);
+      }
+    }
+  }
+
+  function checkCollectibles() {
+    var pCenter = new THREE.Vector3(playerX, 0.4, 0);
+    var pBox = new THREE.Box3().setFromCenterAndSize(pCenter, PLAYER_HITBOX);
+    for (var i = activeCollectibles.length - 1; i >= 0; i--) {
+      var item = activeCollectibles[i];
+      if (!item.visible) continue;
+      if (item.position.z < -2 || item.position.z > 3) continue;
+      var iBox = new THREE.Box3().setFromCenterAndSize(item.position, COLLECTIBLE_HITBOX);
+      if (pBox.intersectsBox(iBox)) {
+        collectItem(item);
+        if (item.userData.collectType === 'coin') coinPool.returnToPool(item);
+        else specialPool.returnToPool(item);
+        activeCollectibles.splice(i, 1);
+      }
+    }
+  }
+
+  function collectItem(item) {
+    var type = item.userData.collectType;
+    if (type === 'coin') {
+      coins++;
+      score += 100 * styleMultiplier;
+      showFloatingText('+100', item.position, '#FFD700');
+      // Bump animation on HUD coin counter
+      hudCoins.classList.remove('coin-bump');
+      void hudCoins.offsetWidth;
+      hudCoins.classList.add('coin-bump');
+      flashCoinCollect();
+    } else if (type === 'star') {
+      score += 500 * styleMultiplier;
+      showFloatingText('+500', item.position, '#FF44FF');
+    } else if (type === 'boost') {
+      isBoosted = true;
+      boostEndTime = performance.now() + BOOST_DURATION;
+      showFloatingText('BOOST!', item.position, '#44FFFF');
+    }
+  }
+
+  // ===================== DIFFICULTY MANAGER =====================
+  var difficultyManager = {
+    baseLevel: 0,
+    waveOffset: 0,
+    effective: 0,
+    wavePhase: 'build',
+    waveTimer: 0,
+
+    update: function(dist) {
+      this.baseLevel = Math.min(dist / 2000, 1.0);
+      var targetOffset = { build: 0.05, peak: 0.15, rest: -0.15 }[this.wavePhase];
+      this.waveOffset += (targetOffset - this.waveOffset) * 0.15;
+      this.effective = Math.max(0, Math.min(1, this.baseLevel + this.waveOffset));
+    },
+
+    onRowSpawned: function() {
+      this.waveTimer++;
+      var durations = { build: 5, peak: 2, rest: 3 };
+      if (this.waveTimer >= durations[this.wavePhase]) {
+        this.waveTimer = 0;
+        var transitions = { build: 'peak', peak: 'rest', rest: 'build' };
+        this.wavePhase = transitions[this.wavePhase];
+      }
+    },
+
+    getRowGap: function() { return 12 - this.effective * 7; },
+
+    getPatternTier: function() {
+      if (this.effective < 0.25) return 'easy';
+      if (this.effective < 0.55) return 'medium';
+      return 'hard';
+    },
+
+    isRestPhase: function() { return this.wavePhase === 'rest'; },
+
+    reset: function() {
+      this.baseLevel = 0; this.waveOffset = 0; this.effective = 0;
+      this.wavePhase = 'build'; this.waveTimer = 0;
+    }
+  };
+
+  // ===================== SPEED TABLE =====================
+  function getTargetSpeed(dist) {
+    var keys = SPEED_TABLE_KEYS;
+    var lower = 0, upper = 2500;
+    for (var i = 0; i < keys.length - 1; i++) {
+      if (dist >= keys[i] && dist <= keys[i+1]) { lower = keys[i]; upper = keys[i+1]; break; }
+    }
+    if (dist > 2000) return SPEED_TABLE[2000] * speedStatMultiplier;
+    var t = upper === lower ? 1 : (dist - lower) / (upper - lower);
+    return (SPEED_TABLE[lower] + (SPEED_TABLE[upper] - SPEED_TABLE[lower]) * t) * speedStatMultiplier;
+  }
+
+  // ===================== FLOATING TEXT =====================
+  function showFloatingText(text, worldPos, color) {
+    color = color || '#FFD700';
+    var el = document.createElement('div');
+    el.className = 'float-text';
+    el.textContent = text;
+    el.style.color = color;
+    var screenPos = worldPos.clone().project(camera);
+    el.style.left = ((screenPos.x + 1) / 2 * window.innerWidth) + 'px';
+    el.style.top = ((-screenPos.y + 1) / 2 * window.innerHeight) + 'px';
+    effectsLayer.appendChild(el);
+    var startY = parseFloat(el.style.top);
+    var opacity = 1;
+    function animate() {
+      startY -= 1.5;
+      opacity -= 0.025;
+      el.style.top = startY + 'px';
+      el.style.opacity = opacity;
+      if (opacity > 0) requestAnimationFrame(animate);
+      else el.remove();
+    }
+    requestAnimationFrame(animate);
+  }
+
+  // ===================== MILESTONE BANNERS =====================
+  function checkMilestones() {
+    var current = Math.floor(distance / 500) * 500;
+    if (current > lastMilestone && current > 0) {
+      lastMilestone = current;
+      showMilestoneBanner(current);
+    }
+  }
+
+  function showMilestoneBanner(dist) {
+    var banner = document.createElement('div');
+    banner.className = 'milestone-banner';
+    banner.innerHTML = '<div class="milestone-value">' + dist + 'm</div><div class="milestone-label">DOWNHILL!</div>';
+    effectsLayer.appendChild(banner);
+    setTimeout(function() { banner.remove(); }, 2100);
+  }
+
+  // ===================== RAMP JUMP =====================
+  function handleRampHit() {
+    isJumping = true;
+    jumpStartTime = performance.now();
+    // Extended jump for elevated events (all-3 ramps)
+    if (eventManager.activeEvent && eventManager.activeEvent.isElevated) {
+      jumpDuration = 2500;
+      jumpHeight = 2.5;
+    } else {
+      jumpDuration = 1000;
+      jumpHeight = 2.0;
+    }
+  }
+
+  function updateJump(now) {
+    if (!isJumping) return;
+    var t = (now - jumpStartTime) / jumpDuration;
+    if (t >= 1) {
+      isJumping = false;
+      playerGroup.position.y = 0;
+      return;
+    }
+    playerGroup.position.y = jumpHeight * 4 * t * (1 - t);
+  }
+
+  // ===================== SPEED PENALTY =====================
+  function applySpeedPenalty() {
+    scrollSpeed *= 0.6;
+  }
+
+  // ===================== MILESTONE BANNER CUSTOM =====================
+  function showMilestoneBannerCustom(text) {
+    var banner = document.createElement('div');
+    banner.className = 'milestone-banner';
+    banner.innerHTML = '<div class="milestone-value">' + text + '</div>';
+    effectsLayer.appendChild(banner);
+    setTimeout(function() { banner.remove(); }, 2100);
+  }
+
+  // ===================== OBSTACLE TYPE VARIETY =====================
+  function getAvailableObstacleTypes() {
+    var types = ['barrel', 'cone'];
+    if (distance > 200) types.push('hay_bale');
+    if (distance > 500) types.push('trash_can');
+    if (distance > 800) types.push('tire_stack');
+    if (distance > 1200) types.push('barrier');
+    return types;
+  }
+
+  function pickObstacleType() {
+    var types = getAvailableObstacleTypes();
+    var pick = types[Math.floor(Math.random() * types.length)];
+    // Anti-repeat: avoid same type 3x in a row
+    if (lastSpawnedTypes.length >= 2 &&
+        lastSpawnedTypes[lastSpawnedTypes.length - 1] === pick &&
+        lastSpawnedTypes[lastSpawnedTypes.length - 2] === pick) {
+      var filtered = types.filter(function(t) { return t !== pick; });
+      if (filtered.length > 0) pick = filtered[Math.floor(Math.random() * filtered.length)];
+    }
+    lastSpawnedTypes.push(pick);
+    if (lastSpawnedTypes.length > 3) lastSpawnedTypes.shift();
+    return pick;
+  }
+
+  // ===================== EVENT MANAGER =====================
+  var eventManager = {
+    lastEventEnd: 0,
+    activeEvent: null,
+
+    update: function(dist) {
+      if (this.activeEvent) return true;
+      if (dist - this.lastEventEnd < 200) return false;
+      if (dist < 400) return false;
+      if (difficultyManager.wavePhase === 'peak') return false;
+
+      if (dist > 500 && Math.random() < 0.008) {
+        this.startRampEvent();
+        return true;
+      }
+      if (dist > 800 && difficultyManager.isRestPhase() && Math.random() < 0.015) {
+        this.startCoinBonusEvent();
+        return true;
+      }
+      if (dist > 600 && difficultyManager.isRestPhase() && Math.random() < 0.012) {
+        this.startCheerEvent();
+        return true;
+      }
+      if (dist > 1000 && Math.random() < 0.006) {
+        this.startElevatedEvent();
+        return true;
+      }
+      return false;
+    },
+
+    startRampEvent: function() {
+      var lane = Math.floor(Math.random() * 3);
+      var others = [0,1,2].filter(function(l){return l!==lane;});
+      this.activeEvent = {
+        rows: [
+          { dist: 0, pattern: (function(){ var p=[false,false,false]; p[others[0]]=true; return p; })(), type: 'cone' },
+          { dist: 8, rampLane: lane },
+          { dist: 20, pattern: (function(){ var p=[false,false,false]; p[others[0]]=true; return p; })(), type: 'barrel' }
+        ],
+        currentRow: 0,
+        startDist: distance
+      };
+    },
+
+    startCoinBonusEvent: function() {
+      var rows = [];
+      var patterns = [
+        [false, true, false],
+        [true, false, true],
+        [false, true, false]
+      ];
+      for (var i = 0; i < patterns.length; i++) {
+        rows.push({ dist: i * 4, coinPattern: patterns[i] });
+      }
+      this.activeEvent = { rows: rows, currentRow: 0, startDist: distance };
+    },
+
+    startCheerEvent: function() {
+      var rows = [];
+      for (var i = 0; i < 4; i++) {
+        rows.push({ dist: i * 6, coinPattern: [true, true, true], noObstacles: true });
+      }
+      this.activeEvent = { rows: rows, currentRow: 0, startDist: distance, banner: 'CHEER ZONE!' };
+      if (this.activeEvent.banner) {
+        showMilestoneBannerCustom(this.activeEvent.banner);
+      }
+    },
+
+    startElevatedEvent: function() {
+      // Ramp up → elevated platform (player jumps and stays high) → coins → ramp down
+      var rows = [];
+      // All 3 lanes get ramps — player MUST jump
+      rows.push({ dist: 0, allRamps: true });
+      // While airborne, dense coins at elevated height
+      for (var i = 0; i < 4; i++) {
+        rows.push({ dist: 4 + i * 4, coinPattern: [true, true, true], elevated: true });
+      }
+      this.activeEvent = { rows: rows, currentRow: 0, startDist: distance, banner: 'OVERGROUND!', isElevated: true };
+      showMilestoneBannerCustom('OVERGROUND!');
+    },
+
+    processEvent: function() {
+      if (!this.activeEvent) return;
+      var ev = this.activeEvent;
+      var elapsed = distance - ev.startDist;
+
+      while (ev.currentRow < ev.rows.length) {
+        var row = ev.rows[ev.currentRow];
+        if (elapsed < row.dist) break;
+
+        if (row.allRamps) {
+          // Spawn ramps in all 3 lanes — player must jump
+          for (var rl = 0; rl < 3; rl++) {
+            var obs = obstaclePool.get();
+            var mainMesh = null;
+            obs.traverse(function(c) { if (c.isMesh && !c.userData.isOutline) mainMesh = c; });
+            if (mainMesh) {
+              mainMesh.geometry.dispose();
+              mainMesh.geometry = new THREE.BoxGeometry(1.4, 0.5, 1.2);
+              mainMesh.material = createToonMaterial(0x44DD66);
+              mainMesh.position.set(0, 0.15, 0);
+              mainMesh.rotation.set(0.3, 0, 0);
+              mainMesh.scale.set(1, 1, 1);
+            }
+            obs.userData.type = 'ramp';
+            obs.userData.hitbox = new THREE.Vector3(1.4, 0.5, 1.2);
+            obs.userData.nearMissCounted = false;
+            obs.position.set(LANES[rl], 0, -SPAWN_DISTANCE);
+            obs.visible = true;
+            activeObstacles.push(obs);
+          }
+          ev.currentRow++;
+          continue;
+        } else if (row.elevated) {
+          // Coins at elevated height (player is in the air from the ramp)
+          for (var lane = 0; lane < 3; lane++) {
+            if (row.coinPattern && row.coinPattern[lane]) {
+              var coin = coinPool.get();
+              if (coin) {
+                coin.position.set(LANES[lane], 2.0, -SPAWN_DISTANCE);
+                coin.visible = true;
+                coin.userData.collectType = 'coin';
+                activeCollectibles.push(coin);
+              }
+            }
+          }
+          ev.currentRow++;
+          continue;
+        } else if (row.rampLane !== undefined) {
+          var obs = obstaclePool.get();
+          var mainMesh = null;
+          obs.traverse(function(c) { if (c.isMesh && !c.userData.isOutline) mainMesh = c; });
+          if (mainMesh) {
+            mainMesh.geometry.dispose();
+            mainMesh.geometry = new THREE.BoxGeometry(1.4, 0.5, 1.2);
+            mainMesh.material = createToonMaterial(0x44DD66);
+            mainMesh.position.set(0, 0.15, 0);
+            mainMesh.rotation.set(0.3, 0, 0);
+            mainMesh.scale.set(1, 1, 1);
+          }
+          obs.userData.type = 'ramp';
+          obs.userData.hitbox = new THREE.Vector3(1.4, 0.5, 1.2);
+          obs.userData.nearMissCounted = false;
+          obs.position.set(LANES[row.rampLane], 0, -SPAWN_DISTANCE);
+          obs.rotation.set(0, 0, 0);
+          obs.visible = true;
+          activeObstacles.push(obs);
+          for (var ci = 0; ci < 3; ci++) {
+            var coin = coinPool.get();
+            if (coin) {
+              coin.position.set(LANES[row.rampLane], 0.8, -SPAWN_DISTANCE + 3 + ci * 2);
+              coin.visible = true;
+              coin.userData.collectType = 'coin';
+              activeCollectibles.push(coin);
+            }
+          }
+        } else if (row.coinPattern) {
+          for (var lane = 0; lane < 3; lane++) {
+            if (row.coinPattern[lane]) {
+              var coin = coinPool.get();
+              if (coin) {
+                coin.position.set(LANES[lane], 0.8, -SPAWN_DISTANCE);
+                coin.visible = true;
+                coin.userData.collectType = 'coin';
+                activeCollectibles.push(coin);
+              }
+            }
+          }
+        } else if (row.pattern) {
+          for (var lane = 0; lane < 3; lane++) {
+            if (row.pattern[lane]) {
+              var obs = obstaclePool.get();
+              var type = row.type || 'cone';
+              var hb = OBSTACLE_HITBOXES[type] || OBSTACLE_HITBOXES.barrel;
+              var mainMesh = null;
+              obs.traverse(function(c) { if (c.isMesh && !c.userData.isOutline) mainMesh = c; });
+              if (mainMesh) {
+                mainMesh.geometry.dispose();
+                mainMesh.geometry = new THREE.BoxGeometry(hb.x, hb.y, hb.z);
+                mainMesh.material = createToonMaterial(OBSTACLE_COLORS[type] || 0xFF6633);
+                mainMesh.position.set(0, hb.y / 2, 0);
+                mainMesh.rotation.set(0, 0, 0);
+                mainMesh.scale.set(1, 1, 1);
+              }
+              obs.traverse(function(c) { c.rotation.set(0, 0, 0); });
+              obs.userData.type = type;
+              obs.userData.hitbox = hb;
+              obs.userData.nearMissCounted = false;
+              obs.position.set(LANES[lane], 0, -SPAWN_DISTANCE);
+              obs.visible = true;
+              activeObstacles.push(obs);
+            }
+          }
+        }
+        ev.currentRow++;
+      }
+
+      if (ev.currentRow >= ev.rows.length) {
+        this.lastEventEnd = distance;
+        this.activeEvent = null;
+      }
+    },
+
+    reset: function() {
+      this.lastEventEnd = 0;
+      this.activeEvent = null;
+    }
+  };
+
+  // ===================== ENVIRONMENT ZONES =====================
+  var ENVIRONMENT_ZONES = [
+    { name:'suburban',    maxDist:500,  road:0x555566, ground:0xBBBBAA, sky:0x87CEEB, fog:0x87CEEB },
+    { name:'urban',       maxDist:1000, road:0x444455, ground:0xAAAA99, sky:0x7ABFDD, fog:0x7ABFDD },
+    { name:'park',        maxDist:1500, road:0x556655, ground:0xAABB99, sky:0x8AD4E8, fog:0x8AD4E8 },
+    { name:'industrial',  maxDist:2000, road:0x555555, ground:0x999988, sky:0x7799AA, fog:0x7799AA },
+    { name:'sunset',      maxDist:99999, road:0x554455, ground:0xAA9988, sky:0xE88844, fog:0xDD7744 }
+  ];
+  var currentZone = null;
+
+  function updateEnvironmentZone() {
+    var zone = null;
+    for (var i = 0; i < ENVIRONMENT_ZONES.length; i++) {
+      if (distance < ENVIRONMENT_ZONES[i].maxDist) { zone = ENVIRONMENT_ZONES[i]; break; }
+    }
+    if (!zone) zone = ENVIRONMENT_ZONES[ENVIRONMENT_ZONES.length - 1];
+    if (zone === currentZone) return;
+    currentZone = zone;
+
+    scene.background.set(zone.sky);
+    scene.fog.color.set(zone.fog);
+
+    for (var i = 0; i < segmentPool.length; i++) {
+      var seg = segmentPool[i];
+      seg.children.forEach(function(child) {
+        if (!child.isMesh) return;
+        if (child.material && child.material.color) {
+          if (child.geometry && child.geometry.parameters) {
+            var w = child.geometry.parameters.width;
+            if (w === ROAD_WIDTH) child.material.color.set(zone.road);
+            else if (Math.abs(w - 2.0) < 0.1) child.material.color.set(zone.ground);
+          }
+        }
+      });
+    }
+  }
+
+  // ===================== ROADSIDE SCENERY =====================
+  var sceneryPool = [];
+  var activeScenery = [];
+  var SCENERY_X_LEFT = -(ROAD_WIDTH / 2 + 1.0);
+  var SCENERY_X_RIGHT = ROAD_WIDTH / 2 + 1.0;
+
+  function createPlaceholderScenery() {
+    var group = new THREE.Group();
+    var r = Math.random();
+
+    if (r < 0.35) {
+      var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,1.0,6), createToonMaterial(0x8B6914));
+      trunk.position.y = 0.5;
+      group.add(trunk);
+      var canopy = new THREE.Mesh(new THREE.SphereGeometry(0.5,8,6), createToonMaterial(0x44AA44));
+      canopy.position.y = 1.3;
+      group.add(canopy);
+    } else if (r < 0.55) {
+      var bush = new THREE.Mesh(new THREE.SphereGeometry(0.35,6,5), createToonMaterial(0x338833));
+      bush.position.y = 0.25;
+      bush.scale.y = 0.7;
+      group.add(bush);
+    } else if (r < 0.7) {
+      var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.04,2.2,6), createToonMaterial(0x444444));
+      pole.position.y = 1.1;
+      group.add(pole);
+      var lamp = new THREE.Mesh(new THREE.SphereGeometry(0.1,8,6), createToonMaterial(0xFFDD44));
+      lamp.position.y = 2.3;
+      group.add(lamp);
+    } else if (r < 0.85) {
+      var w = 1.5 + Math.random() * 1.5;
+      var h = 1.5 + Math.random() * 2;
+      var colors = [0xDDBB88, 0xBB8866, 0xCCAA77, 0xEECC99];
+      var building = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, 1.5),
+        createToonMaterial(colors[Math.floor(Math.random() * colors.length)])
+      );
+      building.position.y = h / 2;
+      building.castShadow = true;
+      group.add(building);
+    } else {
+      var fence = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 0.06), createToonMaterial(0xEEDDCC));
+      fence.position.y = 0.35;
+      group.add(fence);
+    }
+
+    addOutline(group, 0.015);
+    return group;
+  }
+
+  function getOrCreateScenery() {
+    for (var i = 0; i < sceneryPool.length; i++) {
+      if (!sceneryPool[i].visible) return sceneryPool[i];
+    }
+    var s = createPlaceholderScenery();
+    sceneryPool.push(s);
+    scene.add(s);
+    return s;
+  }
+
+  function spawnSceneryForZ(z) {
+    if (Math.random() < 0.15) {
+      var s = getOrCreateScenery();
+      s.position.set(SCENERY_X_LEFT + (Math.random()-0.5)*2, 0, z + (Math.random()-0.5) * SEGMENT_LENGTH * 0.8);
+      s.rotation.y = Math.random() * Math.PI * 2;
+      s.visible = true;
+      activeScenery.push(s);
+    }
+    if (Math.random() < 0.15) {
+      var s = getOrCreateScenery();
+      s.position.set(SCENERY_X_RIGHT + (Math.random()-0.5)*2, 0, z + (Math.random()-0.5) * SEGMENT_LENGTH * 0.8);
+      s.rotation.y = Math.random() * Math.PI * 2;
+      s.visible = true;
+      activeScenery.push(s);
+    }
+  }
+
+  function updateScenery(dt) {
+    for (var i = activeScenery.length - 1; i >= 0; i--) {
+      activeScenery[i].position.z += scrollSpeed * dt;
+      if (activeScenery[i].position.z > 20) {
+        activeScenery[i].visible = false;
+        activeScenery.splice(i, 1);
+      }
+    }
+  }
+
+  // ===================== NEAR-MISS DETECTION =====================
+  function checkNearMisses() {
+    var playerHalfW = PLAYER_HITBOX.x / 2;
+    var playerLeft = playerX - playerHalfW;
+    var playerRight = playerX + playerHalfW;
+
+    for (var i = 0; i < activeObstacles.length; i++) {
+      var obs = activeObstacles[i];
+      if (!obs.visible || obs.userData.nearMissCounted) continue;
+      if (obs.position.z < -0.5 || obs.position.z > 1.5) continue;
+
+      var hb = obs.userData.hitbox;
+      var obsHalfW = hb.x / 2;
+      var obsLeft = obs.position.x - obsHalfW;
+      var obsRight = obs.position.x + obsHalfW;
+
+      // Check lateral gap
+      var gapLeft = playerLeft - obsRight;
+      var gapRight = obsLeft - playerRight;
+      var gap = Math.max(gapLeft, gapRight);
+
+      if (gap > 0 && gap < 0.3) {
+        nearMisses++;
+        score += 50 * styleMultiplier;
+        showFloatingText('CLOSE!', new THREE.Vector3(obs.position.x, 1.5, obs.position.z), '#FF8800');
+        obs.userData.nearMissCounted = true;
+      }
+    }
+  }
+
+  // ===================== HIGH SCORE =====================
+  function saveHighScore(newScore) {
+    var current = parseInt(localStorage.getItem('soapbox:highscore') || '0');
+    if (newScore > current) {
+      localStorage.setItem('soapbox:highscore', newScore.toString());
+      return true;
+    }
+    return false;
+  }
+  function getHighScore() {
+    return parseInt(localStorage.getItem('soapbox:highscore') || '0');
+  }
+  function saveTotalCoins(add) {
+    var current = parseInt(localStorage.getItem('soapbox:total-coins') || '0');
+    localStorage.setItem('soapbox:total-coins', (current + add).toString());
+  }
+
+  // ===================== HUD SPEED =====================
+  function updateHUDSpeed() {
+    var maxSpeed = SPEED_TABLE[2000] * BOOST_MULTIPLIER;
+    var pct = Math.min(scrollSpeed / maxSpeed * 100, 100);
+    speedFill.style.width = pct + '%';
+  }
+
+  // ===================== COUNT-UP ANIMATION =====================
+  function animateCountUp(elementId, from, to, duration) {
+    var el = document.getElementById(elementId);
+    if (!el) return;
+    var start = performance.now();
+    function step(now) {
+      var t = Math.min((now - start) / duration, 1);
+      el.textContent = Math.floor(from + (to - from) * t);
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  var lastSpawnedPattern = [false, false, false];
+
+  function spawnObstacleRow(pattern, z) {
+    pattern = pattern.slice(); // always work on a copy
+
+    // SAFETY 1: never block all 3 lanes in a single row
+    var clearCount = pattern.filter(function(v) { return !v; }).length;
+    if (clearCount === 0) {
+      pattern[Math.floor(Math.random() * 3)] = false;
+    }
+
+    // SAFETY 2: the UNION of this row + previous row must not cover all 3 lanes
+    // (player must be able to survive by staying in or switching to at least one lane)
+    var allCovered = true;
+    for (var c = 0; c < 3; c++) {
+      if (!pattern[c] && !lastSpawnedPattern[c]) { allCovered = false; break; }
+    }
+    if (allCovered) {
+      // Find a lane that's blocked in THIS row but clear in the previous
+      // If none exists, find any blocked lane and clear it
+      var cleared = false;
+      for (var c = 0; c < 3; c++) {
+        if (pattern[c] && !lastSpawnedPattern[c]) { pattern[c] = false; cleared = true; break; }
+      }
+      if (!cleared) {
+        // Force clear the lane that was clear in the previous row, or any lane
+        for (var c = 0; c < 3; c++) {
+          if (pattern[c]) { pattern[c] = false; break; }
+        }
+      }
+    }
+
+    lastSpawnedPattern = pattern.slice();
+
+    for (var lane = 0; lane < 3; lane++) {
+      if (pattern[lane]) {
+        var obs = obstaclePool.get();
+        var type = pickObstacleType();
+        var hb = OBSTACLE_HITBOXES[type];
+        var mainMesh = null;
+        obs.traverse(function(c) {
+          if (c.isMesh && !c.userData.isOutline) {
+            mainMesh = c;
+          }
+        });
+        if (mainMesh) {
+          mainMesh.geometry.dispose();
+          mainMesh.geometry = new THREE.BoxGeometry(hb.x, hb.y, hb.z);
+          mainMesh.material = createToonMaterial(OBSTACLE_COLORS[type]);
+          mainMesh.position.set(0, hb.y / 2, 0);
+          mainMesh.rotation.set(0, 0, 0);
+          mainMesh.scale.set(1, 1, 1);
+        }
+        // Reset all children rotations (outlines etc)
+        obs.traverse(function(c) { c.rotation.set(0, 0, 0); });
+        obs.userData.type = type;
+        obs.userData.hitbox = hb;
+        obs.userData.nearMissCounted = false;
+        obs.position.set(LANES[lane], 0, z);
+        obs.visible = true;
+        activeObstacles.push(obs);
+      }
+    }
+    spawnCoinsForPattern(pattern, z);
+    spawnSpecialForPattern(pattern, z);
+    difficultyManager.onRowSpawned();
+  }
+
+  function spawnObstacles(dt) {
+    // Event manager takes priority
+    if (eventManager.activeEvent) {
+      eventManager.processEvent();
+      return;
+    }
+    if (eventManager.update(distance)) {
+      eventManager.processEvent();
+      return;
+    }
+
+    // Handle queued sequence rows
+    if (sequenceQueue.length > 0) {
+      distanceSinceLastSpawn += scrollSpeed * dt;
+      var next = sequenceQueue[0];
+      if (distanceSinceLastSpawn >= next.gap) {
+        distanceSinceLastSpawn = 0;
+        spawnObstacleRow(next.pattern, -SPAWN_DISTANCE);
+        sequenceQueue.shift();
+      }
+      return;
+    }
+
+    distanceSinceLastSpawn += scrollSpeed * dt;
+    var rowGap = difficultyManager.getRowGap();
+    if (distanceSinceLastSpawn < rowGap) return;
+    distanceSinceLastSpawn = 0;
+
+    // Rest valley: more coin-only rows
+    if (difficultyManager.isRestPhase() && Math.random() < 0.4) {
+      for (var ci = 0; ci < 3; ci++) {
+        var coin = coinPool.get();
+        if (coin) {
+          coin.position.set(LANES[ci], 0.8, -SPAWN_DISTANCE);
+          coin.visible = true;
+          coin.userData.collectType = 'coin';
+          activeCollectibles.push(coin);
+        }
+      }
+      difficultyManager.onRowSpawned();
+      return;
+    }
+
+    var tier = difficultyManager.getPatternTier();
+    var r = Math.random();
+    var pattern;
+
+    if (tier === 'easy') {
+      if (r < 0.8) pattern = PATTERNS_EASY[Math.floor(Math.random() * PATTERNS_EASY.length)];
+      else pattern = PATTERNS_MEDIUM[Math.floor(Math.random() * PATTERNS_MEDIUM.length)];
+    } else if (tier === 'medium') {
+      if (r < 0.35) pattern = PATTERNS_EASY[Math.floor(Math.random() * PATTERNS_EASY.length)];
+      else if (r < 0.80) pattern = PATTERNS_MEDIUM[Math.floor(Math.random() * PATTERNS_MEDIUM.length)];
+      else {
+        // Sequence
+        var seq = PATTERNS_SEQUENCE[Math.floor(Math.random() * PATTERNS_SEQUENCE.length)];
+        spawnObstacleRow(seq.rows[0], -SPAWN_DISTANCE);
+        for (var si = 1; si < seq.rows.length; si++) {
+          sequenceQueue.push({ pattern: seq.rows[si], gap: seq.gap * difficultyManager.getRowGap() * 0.7 });
+        }
+        return;
+      }
+    } else {
+      // hard
+      if (r < 0.10) pattern = PATTERNS_EASY[Math.floor(Math.random() * PATTERNS_EASY.length)];
+      else if (r < 0.50) pattern = PATTERNS_MEDIUM[Math.floor(Math.random() * PATTERNS_MEDIUM.length)];
+      else {
+        var seq = PATTERNS_SEQUENCE[Math.floor(Math.random() * PATTERNS_SEQUENCE.length)];
+        spawnObstacleRow(seq.rows[0], -SPAWN_DISTANCE);
+        for (var si = 1; si < seq.rows.length; si++) {
+          sequenceQueue.push({ pattern: seq.rows[si], gap: seq.gap * difficultyManager.getRowGap() * 0.7 });
+        }
+        return;
+      }
+    }
+
+    spawnObstacleRow(pattern, -SPAWN_DISTANCE);
+  }
+
+  function updateObstacles(dt) {
+    for (var i = activeObstacles.length - 1; i >= 0; i--) {
+      var obs = activeObstacles[i];
+      obs.position.z += scrollSpeed * dt;
+      if (obs.position.z > 15) {
+        obstaclePool.returnToPool(obs);
+        activeObstacles.splice(i, 1);
+      }
+    }
+  }
+
+  // ===================== COLLISION =====================
+  var playerBox = new THREE.Box3();
+  var obsBox = new THREE.Box3();
+
+  function checkCollisions() {
+    if (isJumping && playerGroup.position.y > 0.5) return;
+
+    var half = PLAYER_HITBOX.clone().multiplyScalar(0.5);
+    var center = new THREE.Vector3(playerX, 0.4, 0);
+    playerBox.setFromCenterAndSize(center, PLAYER_HITBOX);
+
+    for (var i = 0; i < activeObstacles.length; i++) {
+      var obs = activeObstacles[i];
+      if (!obs.visible) continue;
+      if (obs.position.z < -2 || obs.position.z > 3) continue;
+      var hb = obs.userData.hitbox;
+      var obsCenter = new THREE.Vector3(obs.position.x, hb.y / 2, obs.position.z);
+      obsBox.setFromCenterAndSize(obsCenter, hb);
+      if (playerBox.intersectsBox(obsBox)) {
+        if (obs.userData.type === 'ramp') {
+          handleRampHit();
+          obs.visible = false;
+          return;
+        }
+        if (obs.userData.type === 'pothole') {
+          applySpeedPenalty();
+          showFloatingText('SLOW!', obs.position.clone(), '#FF4444');
+          obs.visible = false;
+          return;
+        }
+        transition('gameover');
+        return;
+      }
+    }
+  }
+
+  // ===================== CAMERA =====================
+  function updateCamera() {
+    var tx = playerX * 0.3;
+    var bob = Math.sin(distance * 0.8) * 0.04;
+    var target = new THREE.Vector3(tx, 3.0 + bob, 5.5);
+    camera.position.lerp(target, 0.08);
+    camera.lookAt(playerX * 0.2, 0.3, -8);
+  }
+
+  // ===================== SPEED & SCORE =====================
+  function updateSpeed(dt) {
+    var now = performance.now();
+    var targetSpeed = getTargetSpeed(distance);
+    if (isBoosted) {
+      if (now >= boostEndTime) {
+        isBoosted = false;
+      } else {
+        targetSpeed *= BOOST_MULTIPLIER;
+      }
+    }
+    var accelRate = difficultyManager.isRestPhase() ? 0.15 : 0.5;
+    if (scrollSpeed < targetSpeed) {
+      scrollSpeed = Math.min(scrollSpeed + accelRate * dt, targetSpeed);
+    } else {
+      // Ease back down (e.g. after boost ends)
+      scrollSpeed += (targetSpeed - scrollSpeed) * 0.05;
+    }
+  }
+
+  function updateScore(dt) {
+    score += scrollSpeed * dt * 10;
+    distance += scrollSpeed * dt;
+  }
+
+  function updateHUD() {
+    hudDistance.textContent = '\u{1F3C1} ' + Math.floor(distance) + ' m';
+    hudScore.textContent = '\u2B50 ' + Math.floor(score);
+    hudCoins.textContent = '\u{1FA99} ' + coins;
+  }
+
+  // ===================== STATE MACHINE =====================
+  var countdownPhase = 0;
+  var cameraShakeIntensity = 0;
+
+  function transition(newState) {
+    gameState = newState;
+    if (newState === 'countdown') {
+      countdownStartTime = performance.now();
+      countdownPhase = 0;
+      countdownOverlay.style.display = 'flex';
+      gameoverOverlay.style.display = 'none';
+      hudEl.style.display = 'flex';
+      hudSpeed.style.display = 'block';
+      hudMultiplier.style.display = 'block';
+      hudMultiplier.textContent = 'x' + styleMultiplier.toFixed(2);
+      showCountdownNumber('3', false);
+      camera.position.set(3, 5, 8);
+      camera.fov = 45;
+      camera.updateProjectionMatrix();
+      hideVisualOverlays();
+    } else if (newState === 'racing') {
+      countdownOverlay.style.display = 'none';
+      camera.fov = 60;
+      camera.updateProjectionMatrix();
+      showRacingOverlays();
+    } else if (newState === 'gameover') {
+      gameoverTime = performance.now();
+      cameraShakeIntensity = 0.15;
+      gameoverShown = false;
+      // Tilt vehicle
+      vehicleGroup.rotation.z = 0.3;
+      vehicleGroup.rotation.x = -0.15;
+      // Phase 6: DOM screen shake + hide racing overlays
+      shakeScreen(10, 500);
+      hideVisualOverlays();
+    }
+  }
+
+  function showCountdownNumber(text, isGo) {
+    countdownText.className = isGo ? 'go' : '';
+    countdownText.textContent = text;
+    // Re-trigger animation
+    countdownText.style.animation = 'none';
+    countdownText.offsetHeight; // force reflow
+    countdownText.style.animation = 'countdownPop 0.7s ease-out forwards';
+  }
+
+  function updateCountdown(now) {
+    var elapsed = now - countdownStartTime;
+    var t = elapsed / 3500; // 3.5s total
+
+    // Camera lerp from (3,5,8) to (0,3,5.5)
+    var startCam = new THREE.Vector3(3, 5, 8);
+    var endCam = new THREE.Vector3(0, 3, 5.5);
+    var lerpT = Math.min(t / 1.0, 1.0); // complete in first ~3.5s
+    camera.position.lerpVectors(startCam, endCam, lerpT);
+    camera.lookAt(0, 0.5, -8);
+    // Phase 6: FOV zoom from 45 (wide establishing) to 60 (race view)
+    camera.fov = 45 + (60 - 45) * lerpT;
+    camera.updateProjectionMatrix();
+
+    // Show numbers
+    if (elapsed < 1000 && countdownPhase === 0) {
+      // Already showing 3
+    } else if (elapsed >= 1000 && countdownPhase === 0) {
+      countdownPhase = 1;
+      showCountdownNumber('2', false);
+    } else if (elapsed >= 2000 && countdownPhase === 1) {
+      countdownPhase = 2;
+      showCountdownNumber('1', false);
+    } else if (elapsed >= 3000 && countdownPhase === 2) {
+      countdownPhase = 3;
+      showCountdownNumber('GO!', true);
+    } else if (elapsed >= 3500 && countdownPhase === 3) {
+      transition('racing');
+    }
+  }
+
+  function updateGameover(now) {
+    // Camera shake (decaying)
+    var elapsed = (now - gameoverTime) / 1000;
+    if (cameraShakeIntensity > 0.001) {
+      cameraShakeIntensity *= 0.93;
+      camera.position.x += (Math.random() - 0.5) * cameraShakeIntensity;
+      camera.position.y += (Math.random() - 0.5) * cameraShakeIntensity * 0.5;
+    }
+
+    // Show UI after 0.8s
+    if (!gameoverShown && elapsed > 0.8) {
+      gameoverShown = true;
+      var finalScore = Math.floor(score);
+      goDistance.textContent = Math.floor(distance) + ' m';
+      goCoins.textContent = coins;
+      goNearMisses.textContent = nearMisses;
+      goStyle.textContent = 'x' + styleMultiplier.toFixed(2);
+      var isNew = saveHighScore(finalScore);
+      saveTotalCoins(coins);
+      goHighscore.textContent = getHighScore();
+      if (isNew) {
+        goHighscoreBadge.style.display = 'block';
+      } else {
+        goHighscoreBadge.style.display = 'none';
+      }
+      goScore.textContent = '0';
+      gameoverOverlay.style.display = 'flex';
+      animateCountUp('go-score', 0, finalScore, 1200);
+    }
+  }
+
+  // ===================== RESTART =====================
+  window.restartGame = function() {
+    applyVehicleStats();
+    score = 0;
+    distance = 0;
+    coins = 0;
+    nearMisses = 0;
+    isBoosted = false;
+    boostEndTime = 0;
+    lastMilestone = 0;
+    sequenceQueue = [];
+    lastSpawnedPattern = [false, false, false];
+    scrollSpeed = getTargetSpeed(0) * 0.8;
+    currentLane = 1;
+    playerX = 0;
+    targetX = 0;
+    isSwitching = false;
+    distanceSinceLastSpawn = 0;
+
+    difficultyManager.reset();
+    isJumping = false;
+    eventManager.reset();
+    currentZone = null;
+    frameCounter = 0;
+    lastSpawnedTypes = [];
+
+    // Reset vehicle
+    vehicleGroup.rotation.set(0, 0, 0);
+    playerGroup.position.set(0, 0, 0);
+
+    // Return all obstacles
+    for (var i = activeObstacles.length - 1; i >= 0; i--) {
+      obstaclePool.returnToPool(activeObstacles[i]);
+    }
+    activeObstacles = [];
+
+    // Return all collectibles
+    for (var i = activeCollectibles.length - 1; i >= 0; i--) {
+      var c = activeCollectibles[i];
+      if (c.userData.collectType === 'coin') coinPool.returnToPool(c);
+      else specialPool.returnToPool(c);
+    }
+    activeCollectibles = [];
+
+    // Clear scenery
+    for (var i = 0; i < activeScenery.length; i++) {
+      activeScenery[i].visible = false;
+    }
+    activeScenery = [];
+
+    // Clear effects layer
+    effectsLayer.innerHTML = '';
+
+    // Reset track
+    for (var i = 0; i < segmentPool.length; i++) {
+      segmentPool[i].position.z = -i * SEGMENT_LENGTH;
+    }
+
+    // Hide overlays
+    document.getElementById('screen-title').style.display = 'none';
+    document.getElementById('screen-garage').style.display = 'none';
+    gameoverOverlay.style.display = 'none';
+
+    // Show track segments
+    for (var i = 0; i < segmentPool.length; i++) {
+      segmentPool[i].visible = true;
+    }
+
+    camera.fov = 60;
+    camera.updateProjectionMatrix();
+
+    setupRaceLighting();
+    currentMode = 'race';
+    transition('countdown');
+  };
+
+  // ===================== FLOW FUNCTIONS =====================
+  window.startFromTitle = function() {
+    document.getElementById('screen-title').style.display = 'none';
+    showGarage();
+  };
+
+  window.togglePause = function() {
+    if (gameState !== 'racing' && !isPaused) return;
+    if (isPaused) window.resumeGame();
+    else window.pauseGame();
+  };
+
+  window.pauseGame = function() {
+    isPaused = true;
+    document.getElementById('screen-pause').style.display = 'flex';
+  };
+
+  window.resumeGame = function() {
+    isPaused = false;
+    lastTime = performance.now();
+    document.getElementById('screen-pause').style.display = 'none';
+  };
+
+  window.quitToTitle = function() {
+    isPaused = false;
+    document.getElementById('screen-pause').style.display = 'none';
+    document.getElementById('screen-garage').style.display = 'none';
+    gameoverOverlay.style.display = 'none';
+    hudEl.style.display = 'none';
+    hudSpeed.style.display = 'none';
+    hudMultiplier.style.display = 'none';
+    countdownOverlay.style.display = 'none';
+
+    // Reset game state
+    score = 0;
+    distance = 0;
+    coins = 0;
+    nearMisses = 0;
+    styleMultiplier = 1.0;
+    isBoosted = false;
+    boostEndTime = 0;
+    lastMilestone = 0;
+    sequenceQueue = [];
+    lastSpawnedPattern = [false, false, false];
+    scrollSpeed = getTargetSpeed(0) * 0.8;
+    currentLane = 1;
+    playerX = 0;
+    targetX = 0;
+    isSwitching = false;
+    distanceSinceLastSpawn = 0;
+    difficultyManager.reset();
+    isJumping = false;
+    eventManager.reset();
+    currentZone = null;
+    frameCounter = 0;
+    lastSpawnedTypes = [];
+
+    // Reset vehicle
+    vehicleGroup.rotation.set(0, 0, 0);
+    playerGroup.position.set(0, 0, 0);
+
+    // Return all obstacles
+    for (var i = activeObstacles.length - 1; i >= 0; i--) {
+      obstaclePool.returnToPool(activeObstacles[i]);
+    }
+    activeObstacles = [];
+
+    // Return all collectibles
+    for (var i = activeCollectibles.length - 1; i >= 0; i--) {
+      var c = activeCollectibles[i];
+      if (c.userData.collectType === 'coin') coinPool.returnToPool(c);
+      else specialPool.returnToPool(c);
+    }
+    activeCollectibles = [];
+
+    // Clear scenery
+    for (var i = 0; i < activeScenery.length; i++) {
+      activeScenery[i].visible = false;
+    }
+    activeScenery = [];
+
+    // Clear effects layer
+    effectsLayer.innerHTML = '';
+
+    // Reset track
+    for (var i = 0; i < segmentPool.length; i++) {
+      segmentPool[i].position.z = -i * SEGMENT_LENGTH;
+      segmentPool[i].visible = true;
+    }
+
+    camera.fov = 60;
+    camera.updateProjectionMatrix();
+    hideVisualOverlays();
+
+    gameState = 'title';
+    currentMode = 'title';
+
+    // Show title
+    document.getElementById('screen-title').style.display = 'flex';
+    document.getElementById('title-highscore').textContent = getHighScore().toLocaleString();
+    document.getElementById('title-coins').textContent = (parseInt(localStorage.getItem('soapbox:total-coins') || '0')).toLocaleString();
+
+    setupTitleLighting();
+    camera.position.set(2.5, 2, 3.5);
+    camera.lookAt(0, 0.3, 0);
+  };
+
+  // ===================== VEHICLE STATS APPLICATION =====================
+  function applyVehicleStats() {
+    var stats = calculateStats(vehicleData);
+    switchDuration = 350 - (stats.hdl - 1) * 50;
+    styleMultiplier = 1.0 + (stats.sty - 1) * 0.25;
+    speedStatMultiplier = 0.9 + (stats.spd - 1) * 0.05;
+  }
+
+  // ===================== GARAGE =====================
+  var garageDragging = false;
+  var garageDragStartX = 0;
+  var garageRotationStart = 0;
+  var garageActiveTab = 'chassis';
+
+  var GARAGE_CATALOG = {
+    chassis: ['bathtub','rocket','shoe','box','banana','couch'],
+    wheels: ['chunky','skinny','monster','wagon','roller'],
+    top: ['none','flag','antenna','propeller','crown','fin'],
+    side: ['none','sticker','stripe','flame','number','lightning'],
+    front: ['none','bumper','teeth','eyes','headlight','horn'],
+    back: ['none','exhaust','parachute','tailflag','jetpack'],
+    helmet: ['classic','viking','astronaut','mohawk','openface']
+  };
+
+  function updateGarageStats() {
+    var stats = calculateStats(vehicleData);
+    var bars = ['spd','hdl','sty'];
+    bars.forEach(function(key) {
+      var el = document.getElementById('garage-stat-' + key);
+      if (!el) return;
+      var html = '';
+      for (var i = 1; i <= 5; i++) {
+        html += '<div style="width:20px;height:12px;margin-right:2px;display:inline-block;border-radius:2px;background:' + (i <= stats[key] ? (key === 'spd' ? '#FF3344' : key === 'hdl' ? '#4488FF' : '#FFD700') : 'rgba(255,255,255,0.15)') + ';"></div>';
+      }
+      el.innerHTML = html;
+    });
+  }
+
+  function updateGaragePartGrid() {
+    var grid = document.getElementById('garage-part-grid');
+    if (!grid) return;
+    var items = GARAGE_CATALOG[garageActiveTab];
+    var html = '';
+    items.forEach(function(item) {
+      var selected = false;
+      if (garageActiveTab === 'chassis') selected = vehicleData.chassis.type === item;
+      else if (garageActiveTab === 'wheels') selected = vehicleData.wheels.type === item;
+      else if (garageActiveTab === 'helmet') selected = vehicleData.driver.helmet === item;
+      else {
+        var current = vehicleData.decorations[garageActiveTab];
+        selected = (item === 'none' && !current) || current === item;
+      }
+      html += '<button onclick="garageSelectPart(\'' + item + '\')" style="padding:8px 12px;margin:4px;border-radius:8px;border:2px solid ' + (selected ? '#FFD700' : 'rgba(255,255,255,0.2)') + ';background:' + (selected ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.08)') + ';color:white;font-family:var(--font-body);font-size:13px;cursor:pointer;text-transform:capitalize;">' + item + '</button>';
+    });
+    grid.innerHTML = html;
+
+    // Color picker visibility
+    var colorPicker = document.getElementById('garage-color-picker');
+    if (colorPicker) {
+      colorPicker.style.display = (garageActiveTab === 'chassis' || garageActiveTab === 'helmet') ? 'flex' : 'none';
+    }
+  }
+
+  function updateGarageColorPicker() {
+    var container = document.getElementById('garage-color-swatches');
+    if (!container) return;
+    var currentColor = garageActiveTab === 'helmet' ? vehicleData.driver.helmetColor : vehicleData.chassis.color;
+    var html = '';
+    VEHICLE_COLORS.forEach(function(c) {
+      var sel = c.toLowerCase() === currentColor.toLowerCase();
+      html += '<div onclick="garageSelectColor(\'' + c + '\')" style="width:28px;height:28px;border-radius:50%;background:' + c + ';cursor:pointer;border:3px solid ' + (sel ? '#FFD700' : 'transparent') + ';box-shadow:' + (sel ? '0 0 8px rgba(255,215,0,0.5)' : 'none') + ';"></div>';
+    });
+    container.innerHTML = html;
+  }
+
+  window.garageSelectTab = function(tab) {
+    garageActiveTab = tab;
+    // Update tab highlights
+    var tabs = document.querySelectorAll('.garage-tab');
+    tabs.forEach(function(t) {
+      t.style.background = t.dataset.tab === tab ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.08)';
+      t.style.borderColor = t.dataset.tab === tab ? '#FFD700' : 'rgba(255,255,255,0.2)';
+    });
+    updateGaragePartGrid();
+    updateGarageColorPicker();
+  };
+
+  window.garageSelectPart = function(item) {
+    if (garageActiveTab === 'chassis') {
+      vehicleData.chassis.type = item;
+    } else if (garageActiveTab === 'wheels') {
+      vehicleData.wheels.type = item;
+    } else if (garageActiveTab === 'helmet') {
+      vehicleData.driver.helmet = item;
+    } else {
+      vehicleData.decorations[garageActiveTab] = (item === 'none') ? null : item;
+    }
+    assembleVehicle();
+    updateGaragePartGrid();
+    updateGarageStats();
+    saveVehicleDebounced();
+  };
+
+  window.garageSetName = function(name) {
+    vehicleData.name = name;
+    saveVehicleDebounced();
+  };
+
+  window.garageSelectColor = function(color) {
+    if (garageActiveTab === 'helmet') {
+      vehicleData.driver.helmetColor = color;
+    } else {
+      vehicleData.chassis.color = color;
+    }
+    assembleVehicle();
+    updateGarageColorPicker();
+    saveVehicleDebounced();
+  };
+
+  window.showGarage = function() {
+    loadVehicle();
+    currentMode = 'garage';
+    gameState = 'garage';
+    hideVisualOverlays();
+    document.getElementById('screen-garage').style.display = 'flex';
+    document.getElementById('screen-title').style.display = 'none';
+    gameoverOverlay.style.display = 'none';
+    hudEl.style.display = 'none';
+    hudSpeed.style.display = 'none';
+    hudMultiplier.style.display = 'none';
+    countdownOverlay.style.display = 'none';
+    document.getElementById('screen-pause').style.display = 'none';
+    setupGarageLighting();
+    assembleVehicle();
+    vehicleGroup.rotation.set(0, 0, 0);
+    playerGroup.position.set(0, 0, 0);
+    camera.position.set(2, 1.5, 2.5);
+    camera.lookAt(0, 0.3, 0);
+
+    // Hide track segments
+    for (var i = 0; i < segmentPool.length; i++) {
+      segmentPool[i].visible = false;
+    }
+    // Hide obstacles and collectibles
+    for (var i = 0; i < activeObstacles.length; i++) activeObstacles[i].visible = false;
+    for (var i = 0; i < activeCollectibles.length; i++) activeCollectibles[i].visible = false;
+
+    // Update name
+    var nameInput = document.getElementById('garage-vehicle-name');
+    if (nameInput) nameInput.value = vehicleData.name;
+
+    garageActiveTab = 'chassis';
+    garageSelectTab('chassis');
+    updateGarageStats();
+  };
+
+  window.startRaceFromGarage = function() {
+    saveVehicle();
+    document.getElementById('screen-garage').style.display = 'none';
+    applyVehicleStats();
+    setupRaceLighting();
+    currentMode = 'race';
+    vehicleGroup.rotation.set(0, 0, 0);
+
+    // Show track segments
+    for (var i = 0; i < segmentPool.length; i++) {
+      segmentPool[i].visible = true;
+      segmentPool[i].position.z = -i * SEGMENT_LENGTH;
+    }
+
+    // Reset race state
+    score = 0;
+    distance = 0;
+    coins = 0;
+    nearMisses = 0;
+    isBoosted = false;
+    boostEndTime = 0;
+    lastMilestone = 0;
+    sequenceQueue = [];
+    lastSpawnedPattern = [false, false, false];
+    scrollSpeed = getTargetSpeed(0) * 0.8;
+    currentLane = 1;
+    playerX = 0;
+    targetX = 0;
+    isSwitching = false;
+    distanceSinceLastSpawn = 0;
+    difficultyManager.reset();
+    isJumping = false;
+    eventManager.reset();
+    currentZone = null;
+    frameCounter = 0;
+    lastSpawnedTypes = [];
+    playerGroup.position.set(0, 0, 0);
+
+    // Clear scenery
+    for (var i = 0; i < activeScenery.length; i++) {
+      activeScenery[i].visible = false;
+    }
+    activeScenery = [];
+
+    camera.fov = 60;
+    camera.updateProjectionMatrix();
+    transition('countdown');
+  };
+
+  // ===================== INPUT =====================
+  window.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' || e.key === 'p') {
+      togglePause();
+      e.preventDefault();
+      return;
+    }
+    if (gameState !== 'racing' || isPaused) return;
+    if (e.key === 'ArrowLeft' || e.key === 'a') {
+      switchLane(-1);
+      e.preventDefault();
+    } else if (e.key === 'ArrowRight' || e.key === 'd') {
+      switchLane(1);
+      e.preventDefault();
+    }
+  });
+
+  var touchStartX = 0;
+  var touchHandledBySwipe = false;
+
+  renderer.domElement.addEventListener('touchstart', function(e) {
+    if (gameState === 'garage') {
+      e.preventDefault();
+      garageDragging = true;
+      garageDragStartX = e.touches[0].clientX;
+      garageRotationStart = vehicleGroup.rotation.y;
+      return;
+    }
+    if (gameState !== 'racing') return;
+    e.preventDefault();
+    touchStartX = e.touches[0].clientX;
+    touchHandledBySwipe = false;
+    var touch = e.touches[0];
+    if (touch.clientX < window.innerWidth / 2) {
+      switchLane(-1);
+    } else {
+      switchLane(1);
+    }
+  }, { passive: false });
+
+  renderer.domElement.addEventListener('touchmove', function(e) {
+    if (gameState === 'garage' && garageDragging) {
+      e.preventDefault();
+      var dx = e.touches[0].clientX - garageDragStartX;
+      vehicleGroup.rotation.y = garageRotationStart + dx * 0.01;
+    }
+  }, { passive: false });
+
+  renderer.domElement.addEventListener('touchend', function(e) {
+    garageDragging = false;
+    if (gameState !== 'racing' || isPaused) return;
+    if (e.changedTouches && e.changedTouches.length > 0) {
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 30) {
+        switchLane(dx > 0 ? 1 : -1);
+      }
+    }
+  });
+
+  renderer.domElement.addEventListener('mousedown', function(e) {
+    if (gameState === 'garage') {
+      garageDragging = true;
+      garageDragStartX = e.clientX;
+      garageRotationStart = vehicleGroup.rotation.y;
+    }
+  });
+
+  window.addEventListener('mousemove', function(e) {
+    if (gameState === 'garage' && garageDragging) {
+      var dx = e.clientX - garageDragStartX;
+      vehicleGroup.rotation.y = garageRotationStart + dx * 0.01;
+    }
+  });
+
+  window.addEventListener('mouseup', function() {
+    garageDragging = false;
+  });
+
+  // ===================== RESIZE =====================
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ===================== PHASE 6: VISUAL POLISH =====================
+  function updateSpeedLines() {
+    var maxSpd = SPEED_TABLE[2000] || 15;
+    var threshold = maxSpd * 0.5;
+    var intensity = Math.max(0, (scrollSpeed - threshold) / (maxSpd - threshold));
+    document.getElementById('speed-lines').style.opacity = intensity * 0.6;
+  }
+
+  function updateBoostOverlay() {
+    var el = document.getElementById('boost-overlay');
+    el.style.opacity = isBoosted ? '0.8' : '0';
+  }
+
+  function shakeScreen(intensity, duration) {
+    intensity = intensity || 8;
+    duration = duration || 400;
+    var container = document.body;
+    var start = performance.now();
+    function tick(now) {
+      var t = (now - start) / duration;
+      if (t >= 1) { container.style.transform = ''; return; }
+      var decay = 1 - t;
+      var dx = (Math.random() - 0.5) * intensity * decay;
+      var dy = (Math.random() - 0.5) * intensity * decay;
+      container.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function flashCoinCollect() {
+    var flash = document.createElement('div');
+    flash.className = 'coin-flash';
+    document.getElementById('effects-layer').appendChild(flash);
+    setTimeout(function() { flash.remove(); }, 250);
+  }
+
+  function hideVisualOverlays() {
+    document.getElementById('speed-lines').style.opacity = '0';
+    document.getElementById('boost-overlay').style.opacity = '0';
+    document.getElementById('vignette').style.opacity = '0';
+  }
+
+  function showRacingOverlays() {
+    document.getElementById('vignette').style.opacity = '1';
+  }
+
+  // ===================== GAME LOOP =====================
+  function gameLoop(time) {
+    requestAnimationFrame(gameLoop);
+
+    var dt = (time - lastTime) / 1000;
+    lastTime = time;
+    if (dt > MAX_DT) dt = MAX_DT;
+    if (dt <= 0) dt = 0.016;
+
+    var now = performance.now();
+
+    if (gameState === 'title') {
+      // Turntable rotation
+      vehicleGroup.rotation.y += dt * 0.5;
+    } else if (gameState === 'garage') {
+      // Turntable unless dragging
+      if (!garageDragging) {
+        vehicleGroup.rotation.y += dt * 0.4;
+      }
+    } else if (gameState === 'countdown') {
+      updateCountdown(now);
+    } else if (gameState === 'racing') {
+      if (!isPaused) {
+        difficultyManager.update(distance);
+        updateSpeed(dt);
+        updateLanePosition(now);
+        updateJump(now);
+        updateTrack(dt);
+        spawnObstacles(dt);
+        updateObstacles(dt);
+        updateScenery(dt);
+        updateCollectibles(dt, time);
+        checkCollisions();
+        checkCollectibles();
+        checkNearMisses();
+        updateScore(dt);
+        updateCamera();
+        updateHUD();
+        updateHUDSpeed();
+        checkMilestones();
+        // Environment zone update every 30 frames
+        frameCounter++;
+        if (frameCounter % 30 === 0) {
+          updateEnvironmentZone();
+        }
+        // Spin wheels
+        for (var i = 0; i < wheels.length; i++) {
+          wheels[i].rotation.x += scrollSpeed * dt * 3;
+        }
+        // Phase 6: Visual polish updates
+        updateSpeedLines();
+        updateBoostOverlay();
+        // FOV shift during boost
+        if (isBoosted) {
+          camera.fov = THREE.MathUtils.lerp(camera.fov, 72, 0.08);
+        } else {
+          camera.fov = THREE.MathUtils.lerp(camera.fov, 60, 0.04);
+        }
+        camera.updateProjectionMatrix();
+        // Subtle forward lean for downhill feel
+        vehicleGroup.rotation.x = -0.05;
+      }
+    } else if (gameState === 'gameover') {
+      updateGameover(now);
+    }
+
+    // Sun follows player roughly
+    if (gameState !== 'title' && gameState !== 'garage') {
+      sunLight.position.set(playerX + 4, 10, 5);
+      sunLight.target.position.set(playerX, 0, -5);
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  // ===================== INIT =====================
+  function init() {
+    loadVehicle();
+    initTrack();
+    buildPlayer();
+    initObstacles();
+    initCollectibles();
+    scrollSpeed = getTargetSpeed(0) * 0.8;
+    lastTime = performance.now();
+
+    // Start in title mode
+    gameState = 'title';
+    currentMode = 'title';
+    setupTitleLighting();
+    camera.position.set(2.5, 2, 3.5);
+    camera.lookAt(0, 0.3, 0);
+
+    // Populate title screen stats
+    document.getElementById('title-highscore').textContent = getHighScore().toLocaleString();
+    document.getElementById('title-coins').textContent = (parseInt(localStorage.getItem('soapbox:total-coins') || '0')).toLocaleString();
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
