@@ -713,11 +713,23 @@
   var scrollOffset = 0;
 
   // ===================== BUILDING ROW SYSTEM =====================
-  var BUILDING_COLORS = [0xFF3377, 0x22DDCC, 0xFF6622, 0x8844FF, 0x33BBFF, 0xFFCC00, 0xFF44AA, 0x44FF88, 0xDD33FF, 0xFF5544];
-  var ROOF_COLORS = [0xFF2244, 0x3366FF, 0xFFAA00, 0x22CCAA, 0xEE33FF];
-  var AWNING_COLORS = [0xFF1144, 0x00BBFF, 0x33FF66, 0xFFDD00, 0xFF44DD];
-  var WIN_DARK_MAT = new THREE.MeshBasicMaterial({ color: 0x1A1A33 });
-  var WIN_LIT_MAT = new THREE.MeshBasicMaterial({ color: 0xFFFF66 });
+  // Warm urban palette matching the sunset skyline background
+  var BUILDING_COLORS = [
+    0xCC6644, // burnt orange
+    0xDD8866, // warm terracotta
+    0xBB5544, // brick red
+    0x8877AA, // dusty purple
+    0x557788, // muted teal
+    0xCC9955, // sandy gold
+    0xAA6677, // mauve
+    0x668877, // sage green
+    0xDD7755, // coral
+    0x9988AA, // lavender grey
+  ];
+  var ROOF_COLORS = [0xCC4433, 0x886644, 0xAA7755, 0x556677, 0x995544];
+  var AWNING_COLORS = [0xCC5533, 0xDD8844, 0x887766, 0xAA6655, 0xBB7744];
+  var WIN_DARK_MAT = new THREE.MeshBasicMaterial({ color: 0x1A1A2A });
+  var WIN_LIT_MAT = new THREE.MeshBasicMaterial({ color: 0xFFDD77 });
   var WIN_GEO = new THREE.PlaneGeometry(0.4, 0.55);
 
   function createBuildingRow(side, segLen) {
