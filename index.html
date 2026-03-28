@@ -339,15 +339,15 @@
   // ===================== CONSTANTS =====================
   const SEGMENT_LENGTH = 12;
   const VISIBLE_SEGMENTS = 8;
-  const ROAD_WIDTH = 7.0;
-  const LANE_WIDTH = 1.8;
-  const LANES = [-1.8, 0, 1.8];
+  const ROAD_WIDTH = 5.4;
+  const LANE_WIDTH = 1.4;
+  const LANES = [-1.4, 0, 1.4];
   const BASE_SPEED = 8;
   const SPAWN_DISTANCE = 60;
   const MIN_ROW_GAP_BASE = 12;
   const CAM_OFFSET = new THREE.Vector3(0, 3.0, 5.5);
   const CAM_LOOK_AHEAD = new THREE.Vector3(0, 0.5, -8);
-  const PLAYER_HITBOX = new THREE.Vector3(0.8, 0.7, 0.9);
+  const PLAYER_HITBOX = new THREE.Vector3(0.6, 0.7, 1.0);
   const MAX_DT = 0.05;
 
   const OBSTACLE_HITBOXES = {
@@ -387,7 +387,7 @@
     { rows: [[false,true,true],[true,true,false],[false,true,true]], gap: 0.8 }
   ];
 
-  var SPEED_TABLE = { 0: 7.0, 100: 8.5, 300: 10.0, 600: 11.5, 1000: 13.0, 1500: 14.0, 2000: 15.0 };
+  var SPEED_TABLE = { 0: 9.5, 100: 11.0, 300: 12.5, 600: 14.0, 1000: 15.5, 1500: 16.5, 2000: 17.0 };
   var SPEED_TABLE_KEYS = [0, 100, 300, 600, 1000, 1500, 2000];
   var COLLECTIBLE_HITBOX = new THREE.Vector3(0.6, 0.6, 0.6);
 
@@ -439,12 +439,12 @@
   var vehicleData = JSON.parse(JSON.stringify(DEFAULT_VEHICLE));
 
   var CHASSIS_DIMS = {
-    bathtub: { w:1.2, h:0.5, d:0.7 },
-    rocket:  { w:1.6, h:0.4, d:0.5 },
-    shoe:    { w:1.3, h:0.6, d:0.7 },
-    box:     { w:1.0, h:0.5, d:0.6 },
-    banana:  { w:1.5, h:0.5, d:0.5 },
-    couch:   { w:1.1, h:0.6, d:0.7 }
+    bathtub: { w:0.7, h:0.5, d:1.2 },
+    rocket:  { w:0.5, h:0.4, d:1.6 },
+    shoe:    { w:0.7, h:0.6, d:1.3 },
+    box:     { w:0.6, h:0.5, d:1.0 },
+    banana:  { w:0.5, h:0.5, d:1.5 },
+    couch:   { w:0.7, h:0.6, d:1.1 }
   };
   var WHEEL_RADIUS = {
     chunky: 0.18, skinny: 0.22, monster: 0.28, wagon: 0.20, roller: 0.10
@@ -551,8 +551,55 @@
   document.body.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x87CEEB);
-  scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
+
+  // City skyline background — painted canvas texture
+  function createCitySkylineBackground() {
+    var canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 512;
+    var ctx = canvas.getContext('2d');
+    // Sky gradient
+    var skyGrad = ctx.createLinearGradient(0, 0, 0, 512);
+    skyGrad.addColorStop(0, '#1A3366');
+    skyGrad.addColorStop(0.4, '#3388CC');
+    skyGrad.addColorStop(0.7, '#55BBEE');
+    skyGrad.addColorStop(1.0, '#AADDFF');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, 512, 512);
+    // Far city layer
+    ctx.fillStyle = 'rgba(50, 50, 70, 0.3)';
+    var buildings = [];
+    for (var x = 0; x < 512; x += 8 + Math.random() * 15) {
+      var h = 30 + Math.random() * 80;
+      var w = 8 + Math.random() * 20;
+      buildings.push({x:x, w:w, h:h});
+      ctx.fillRect(x, 350 - h * 0.5, w, h * 0.5);
+    }
+    // Near city layer
+    ctx.fillStyle = 'rgba(35, 35, 55, 0.5)';
+    for (var i = 0; i < buildings.length; i++) {
+      var b = buildings[i];
+      if (Math.random() < 0.6) ctx.fillRect(b.x + 3, 350 - b.h * 0.8, b.w * 0.8, b.h * 0.8);
+    }
+    // Lit windows
+    ctx.fillStyle = 'rgba(255, 255, 150, 0.4)';
+    for (var i = 0; i < 80; i++) {
+      ctx.fillRect(Math.random() * 512, 290 + Math.random() * 50, 2, 2);
+    }
+    // Horizon glow
+    var glow = ctx.createLinearGradient(0, 330, 0, 370);
+    glow.addColorStop(0, 'rgba(255, 200, 150, 0)');
+    glow.addColorStop(0.5, 'rgba(255, 200, 150, 0.15)');
+    glow.addColorStop(1, 'rgba(255, 200, 150, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 330, 512, 40);
+    var texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+    return texture;
+  }
+
+  var citySkylineTexture = createCitySkylineBackground();
+  scene.background = citySkylineTexture;
+  scene.fog = new THREE.Fog(0x44BBEE, 18, 50);
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(3, 5, 8);
@@ -590,7 +637,7 @@
   }
 
   function addOutline(object, thickness) {
-    thickness = thickness !== undefined ? thickness : 0.03;
+    thickness = thickness !== undefined ? thickness : 0.04;
     var children = [];
     object.traverse(function(child) {
       if (child.isMesh && !child.userData.isOutline && !child.userData.noOutline) {
@@ -619,9 +666,9 @@
     scene.fog = new THREE.Fog(0x3A6EA5, 8, 25);
   }
   function setupRaceLighting() {
-    scene.background = new THREE.Color(0x87CEEB);
-    scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
-    ambientLight.color.set(0xFFF4E0);
+    scene.background = citySkylineTexture;
+    scene.fog = new THREE.Fog(0x44BBEE, 18, 50);
+    ambientLight.color.set(0xFFEEFF);
     ambientLight.intensity = 0.5;
     sunLight.intensity = 0.9;
     sunLight.position.set(4, 10, 5);
@@ -630,7 +677,7 @@
   function setupGarageLighting() {
     scene.background = new THREE.Color(0x1E1E2E);
     scene.fog = new THREE.Fog(0x1E1E2E, 8, 25);
-    ambientLight.color.set(0xFFF4E0);
+    ambientLight.color.set(0xFFEEFF);
     ambientLight.intensity = 0.35;
     sunLight.intensity = 1.0;
     sunLight.position.set(0, 5, 2);
@@ -638,10 +685,10 @@
   }
 
   // ===================== LIGHTING =====================
-  const ambientLight = new THREE.AmbientLight(0xFFF4E0, 0.5);
+  const ambientLight = new THREE.AmbientLight(0xFFEEFF, 0.6);
   scene.add(ambientLight);
 
-  const sunLight = new THREE.DirectionalLight(0xFFF4E0, 0.9);
+  const sunLight = new THREE.DirectionalLight(0xFFFFFF, 1.1);
   sunLight.position.set(4, 10, 5);
   sunLight.castShadow = true;
   sunLight.shadow.mapSize.set(1024, 1024);
@@ -655,10 +702,10 @@
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0xB97A20, 0.35);
+  const hemiLight = new THREE.HemisphereLight(0x55DDFF, 0xFF4488, 0.45);
   scene.add(hemiLight);
 
-  const fillLight = new THREE.DirectionalLight(0x88BBFF, 0.15);
+  const fillLight = new THREE.DirectionalLight(0x66CCFF, 0.25);
   fillLight.position.set(-3, 5, 2);
   scene.add(fillLight);
 
@@ -667,11 +714,11 @@
   var scrollOffset = 0;
 
   // ===================== BUILDING ROW SYSTEM =====================
-  var BUILDING_COLORS = [0xDDBB88, 0xCC8866, 0xEEAA77, 0xBB9977, 0xDD9988, 0xAABBCC, 0xCCBB99, 0xE8C8A0, 0xBBA488, 0xD4A574];
-  var ROOF_COLORS = [0xCC4444, 0x5577AA, 0x886644, 0x668855, 0xAA5533];
-  var AWNING_COLORS = [0xCC3333, 0x3366AA, 0x44AA55, 0xDD8800, 0xAA44AA];
-  var WIN_DARK_MAT = new THREE.MeshBasicMaterial({ color: 0x445566 });
-  var WIN_LIT_MAT = new THREE.MeshBasicMaterial({ color: 0xFFEEAA });
+  var BUILDING_COLORS = [0xFF3377, 0x22DDCC, 0xFF6622, 0x8844FF, 0x33BBFF, 0xFFCC00, 0xFF44AA, 0x44FF88, 0xDD33FF, 0xFF5544];
+  var ROOF_COLORS = [0xFF2244, 0x3366FF, 0xFFAA00, 0x22CCAA, 0xEE33FF];
+  var AWNING_COLORS = [0xFF1144, 0x00BBFF, 0x33FF66, 0xFFDD00, 0xFF44DD];
+  var WIN_DARK_MAT = new THREE.MeshBasicMaterial({ color: 0x1A1A33 });
+  var WIN_LIT_MAT = new THREE.MeshBasicMaterial({ color: 0xFFFF66 });
   var WIN_GEO = new THREE.PlaneGeometry(0.4, 0.55);
 
   function createBuildingRow(side, segLen) {
@@ -758,13 +805,13 @@
     // Road
     var roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, SEGMENT_LENGTH);
     roadGeo.rotateX(-Math.PI / 2);
-    var road = new THREE.Mesh(roadGeo, createToonMaterial(0x555566));
+    var road = new THREE.Mesh(roadGeo, createToonMaterial(0x2A2A3E));
     road.receiveShadow = true;
     group.add(road);
 
     // Curbs
     var curbGeo = new THREE.BoxGeometry(0.3, 0.1, SEGMENT_LENGTH);
-    var curbMat = createToonMaterial(0xCC3333);
+    var curbMat = createToonMaterial(0xFF2255);
     var leftCurb = new THREE.Mesh(curbGeo, curbMat);
     leftCurb.position.set(-(ROAD_WIDTH / 2 + 0.15), 0.05, 0);
     group.add(leftCurb);
@@ -792,13 +839,13 @@
     // Sidewalks
     var swGeo = new THREE.PlaneGeometry(2.0, SEGMENT_LENGTH);
     swGeo.rotateX(-Math.PI / 2);
-    var swMat = createToonMaterial(0xBBBBAA);
+    var swMat = createToonMaterial(0x888899);
     var leftSW = new THREE.Mesh(swGeo, swMat);
-    leftSW.position.set(-(ROAD_WIDTH / 2 + 1.0), 0.0, 0);
+    leftSW.position.set(-(ROAD_WIDTH / 2 + 1.0), 0.08, 0);
     leftSW.receiveShadow = true;
     group.add(leftSW);
     var rightSW = new THREE.Mesh(swGeo, swMat);
-    rightSW.position.set(ROAD_WIDTH / 2 + 1.0, 0.0, 0);
+    rightSW.position.set(ROAD_WIDTH / 2 + 1.0, 0.08, 0);
     rightSW.receiveShadow = true;
     group.add(rightSW);
 
@@ -1043,6 +1090,8 @@
   ObjectPool.prototype.returnToPool = function(obj) {
     obj.visible = false;
     obj.position.set(0, -100, 0);
+    obj.userData.elevated = false;
+    obj.userData.elevatedY = undefined;
   };
 
   // ===================== OBSTACLES =====================
@@ -1179,7 +1228,11 @@
       item.position.z += scrollSpeed * dt;
       // Spin and bob
       item.rotation.y = time * 0.003;
-      item.position.y = (item.userData.collectType === 'coin' ? 0.8 : 1.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
+      if (item.userData.elevated) {
+        item.position.y = (item.userData.elevatedY || 2.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
+      } else {
+        item.position.y = (item.userData.collectType === 'coin' ? 0.8 : 1.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
+      }
       // Recycle
       if (item.position.z > 15) {
         if (item.userData.collectType === 'coin') coinPool.returnToPool(item);
@@ -1190,7 +1243,7 @@
   }
 
   function checkCollectibles() {
-    var pCenter = new THREE.Vector3(playerX, 0.4, 0);
+    var pCenter = new THREE.Vector3(playerX, 0.4 + playerGroup.position.y, 0);
     var pBox = new THREE.Box3().setFromCenterAndSize(pCenter, PLAYER_HITBOX);
     for (var i = activeCollectibles.length - 1; i >= 0; i--) {
       var item = activeCollectibles[i];
@@ -1236,15 +1289,15 @@
     waveTimer: 0,
 
     update: function(dist) {
-      this.baseLevel = Math.min(dist / 2000, 1.0);
-      var targetOffset = { build: 0.05, peak: 0.15, rest: -0.15 }[this.wavePhase];
+      this.baseLevel = Math.min(dist / 1200, 1.0);
+      var targetOffset = { build: 0.08, peak: 0.20, rest: -0.08 }[this.wavePhase];
       this.waveOffset += (targetOffset - this.waveOffset) * 0.15;
       this.effective = Math.max(0, Math.min(1, this.baseLevel + this.waveOffset));
     },
 
     onRowSpawned: function() {
       this.waveTimer++;
-      var durations = { build: 5, peak: 2, rest: 3 };
+      var durations = { build: 4, peak: 3, rest: 2 };
       if (this.waveTimer >= durations[this.wavePhase]) {
         this.waveTimer = 0;
         var transitions = { build: 'peak', peak: 'rest', rest: 'build' };
@@ -1252,7 +1305,12 @@
       }
     },
 
-    getRowGap: function() { return 12 - this.effective * 7; },
+    getRowGap: function() {
+      // Grace period: wider gaps in first 300m, then tighten
+      var baseGap = distance < 300 ? 12 : 8;
+      var squeeze = distance < 300 ? this.effective * 2 : this.effective * 3.5;
+      return baseGap - squeeze;
+    },
 
     getPatternTier: function() {
       if (this.effective < 0.25) return 'easy';
@@ -1392,23 +1450,26 @@
 
     update: function(dist) {
       if (this.activeEvent) return true;
-      if (dist - this.lastEventEnd < 200) return false;
-      if (dist < 400) return false;
-      if (difficultyManager.wavePhase === 'peak') return false;
+      if (dist - this.lastEventEnd < 100) return false;
+      if (dist < 80) return false;
 
-      if (dist > 500 && Math.random() < 0.008) {
+      // Ramp events — can trigger anytime
+      if (dist > 100 && Math.random() < 0.04) {
         this.startRampEvent();
         return true;
       }
-      if (dist > 800 && difficultyManager.isRestPhase() && Math.random() < 0.015) {
+      // Coin bonus — rest phase only
+      if (dist > 300 && difficultyManager.isRestPhase() && Math.random() < 0.03) {
         this.startCoinBonusEvent();
         return true;
       }
-      if (dist > 600 && difficultyManager.isRestPhase() && Math.random() < 0.012) {
+      // Cheer zone — rest phase only
+      if (dist > 250 && difficultyManager.isRestPhase() && Math.random() < 0.02) {
         this.startCheerEvent();
         return true;
       }
-      if (dist > 1000 && Math.random() < 0.006) {
+      // Elevated — can trigger anytime, high probability
+      if (dist > 200 && Math.random() < 0.06) {
         this.startElevatedEvent();
         return true;
       }
@@ -1459,8 +1520,8 @@
       // All 3 lanes get ramps — player MUST jump
       rows.push({ dist: 0, allRamps: true });
       // While airborne, dense coins at elevated height
-      for (var i = 0; i < 4; i++) {
-        rows.push({ dist: 4 + i * 4, coinPattern: [true, true, true], elevated: true });
+      for (var i = 0; i < 6; i++) {
+        rows.push({ dist: 4 + i * 3, coinPattern: [true, true, true], elevated: true });
       }
       this.activeEvent = { rows: rows, currentRow: 0, startDist: distance, banner: 'OVERGROUND!', isElevated: true };
       showMilestoneBannerCustom('OVERGROUND!');
@@ -1507,6 +1568,8 @@
                 coin.position.set(LANES[lane], 2.0, -SPAWN_DISTANCE);
                 coin.visible = true;
                 coin.userData.collectType = 'coin';
+                coin.userData.elevated = true;
+                coin.userData.elevatedY = 2.0;
                 activeCollectibles.push(coin);
               }
             }
@@ -1532,12 +1595,15 @@
           obs.rotation.set(0, 0, 0);
           obs.visible = true;
           activeObstacles.push(obs);
-          for (var ci = 0; ci < 3; ci++) {
+          for (var ci = 0; ci < 6; ci++) {
             var coin = coinPool.get();
             if (coin) {
-              coin.position.set(LANES[row.rampLane], 0.8, -SPAWN_DISTANCE + 3 + ci * 2);
+              var rampCoinY = 1.2 + Math.sin(ci / 5 * Math.PI) * 1.0;
+              coin.position.set(LANES[row.rampLane], rampCoinY, -SPAWN_DISTANCE - 3 - ci * 1.5);
               coin.visible = true;
               coin.userData.collectType = 'coin';
+              coin.userData.elevated = true;
+              coin.userData.elevatedY = rampCoinY;
               activeCollectibles.push(coin);
             }
           }
@@ -1596,11 +1662,11 @@
 
   // ===================== ENVIRONMENT ZONES =====================
   var ENVIRONMENT_ZONES = [
-    { name:'suburban',    maxDist:500,  road:0x555566, ground:0xBBBBAA, sky:0x87CEEB, fog:0x87CEEB },
-    { name:'urban',       maxDist:1000, road:0x444455, ground:0xAAAA99, sky:0x7ABFDD, fog:0x7ABFDD },
-    { name:'park',        maxDist:1500, road:0x556655, ground:0xAABB99, sky:0x8AD4E8, fog:0x8AD4E8 },
-    { name:'industrial',  maxDist:2000, road:0x555555, ground:0x999988, sky:0x7799AA, fog:0x7799AA },
-    { name:'sunset',      maxDist:99999, road:0x554455, ground:0xAA9988, sky:0xE88844, fog:0xDD7744 }
+    { name:'suburban',    maxDist:500,  road:0x2A2A3E, ground:0x888899, sky:0x44BBEE, fog:0x44BBEE },
+    { name:'urban',       maxDist:1000, road:0x222233, ground:0x777788, sky:0x3399DD, fog:0x3399DD },
+    { name:'park',        maxDist:1500, road:0x2A3A2A, ground:0x779977, sky:0x55DDFF, fog:0x55DDFF },
+    { name:'industrial',  maxDist:2000, road:0x2A2A2A, ground:0x666677, sky:0x6688BB, fog:0x6688BB },
+    { name:'sunset',      maxDist:99999, road:0x332233, ground:0x887766, sky:0xFF5533, fog:0xEE4422 }
   ];
   var currentZone = null;
 
@@ -1613,7 +1679,7 @@
     if (zone === currentZone) return;
     currentZone = zone;
 
-    scene.background.set(zone.sky);
+    // Keep city skyline texture — only update fog color
     scene.fog.color.set(zone.fog);
 
     for (var i = 0; i < segmentPool.length; i++) {
@@ -1645,11 +1711,11 @@
       var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.12,1.0,6), createToonMaterial(0x8B6914));
       trunk.position.y = 0.5;
       group.add(trunk);
-      var canopy = new THREE.Mesh(new THREE.SphereGeometry(0.5,8,6), createToonMaterial(0x44AA44));
+      var canopy = new THREE.Mesh(new THREE.SphereGeometry(0.5,8,6), createToonMaterial(0x33FF66));
       canopy.position.y = 1.3;
       group.add(canopy);
     } else if (r < 0.55) {
-      var bush = new THREE.Mesh(new THREE.SphereGeometry(0.35,6,5), createToonMaterial(0x338833));
+      var bush = new THREE.Mesh(new THREE.SphereGeometry(0.35,6,5), createToonMaterial(0x22CC55));
       bush.position.y = 0.25;
       bush.scale.y = 0.7;
       group.add(bush);
@@ -1663,7 +1729,7 @@
     } else if (r < 0.85) {
       var w = 1.5 + Math.random() * 1.5;
       var h = 1.5 + Math.random() * 2;
-      var colors = [0xDDBB88, 0xBB8866, 0xCCAA77, 0xEECC99];
+      var colors = [0xFF3377, 0x22DDCC, 0x8844FF, 0xFF6622];
       var building = new THREE.Mesh(
         new THREE.BoxGeometry(w, h, 1.5),
         createToonMaterial(colors[Math.floor(Math.random() * colors.length)])
@@ -1672,7 +1738,7 @@
       building.castShadow = true;
       group.add(building);
     } else {
-      var fence = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 0.06), createToonMaterial(0xEEDDCC));
+      var fence = new THREE.Mesh(new THREE.BoxGeometry(2, 0.7, 0.06), createToonMaterial(0xCCCCDD));
       fence.position.y = 0.35;
       group.add(fence);
     }
@@ -1817,6 +1883,24 @@
       }
     }
 
+    // HARD SAFETY: check actual obstacles near spawn point
+    var lanesNearby = [false, false, false];
+    for (var ai = 0; ai < activeObstacles.length; ai++) {
+      var ao = activeObstacles[ai];
+      if (Math.abs(ao.position.z - z) < 5) {
+        for (var li = 0; li < 3; li++) {
+          if (Math.abs(ao.position.x - LANES[li]) < 0.5) { lanesNearby[li] = true; break; }
+        }
+      }
+    }
+    var allBlocked = (pattern[0] || lanesNearby[0]) && (pattern[1] || lanesNearby[1]) && (pattern[2] || lanesNearby[2]);
+    if (allBlocked) {
+      for (var c = 0; c < 3; c++) {
+        if (pattern[c] && !lanesNearby[c]) { pattern[c] = false; break; }
+      }
+      if (pattern[0] && pattern[1] && pattern[2]) pattern[Math.floor(Math.random() * 3)] = false;
+    }
+
     lastSpawnedPattern = pattern.slice();
 
     for (var lane = 0; lane < 3; lane++) {
@@ -1876,6 +1960,9 @@
       return;
     }
 
+    // Grace period: ~2 seconds with no obstacles
+    if (distance < 20) return;
+
     distanceSinceLastSpawn += scrollSpeed * dt;
     var rowGap = difficultyManager.getRowGap();
     if (distanceSinceLastSpawn < rowGap) return;
@@ -1901,7 +1988,9 @@
     var pattern;
 
     if (tier === 'easy') {
-      if (r < 0.8) pattern = PATTERNS_EASY[Math.floor(Math.random() * PATTERNS_EASY.length)];
+      // First 200m: almost all singles. After that, mix in doubles
+      var easyThreshold = distance < 200 ? 0.85 : 0.55;
+      if (r < easyThreshold) pattern = PATTERNS_EASY[Math.floor(Math.random() * PATTERNS_EASY.length)];
       else pattern = PATTERNS_MEDIUM[Math.floor(Math.random() * PATTERNS_MEDIUM.length)];
     } else if (tier === 'medium') {
       if (r < 0.35) pattern = PATTERNS_EASY[Math.floor(Math.random() * PATTERNS_EASY.length)];
@@ -1936,6 +2025,10 @@
     for (var i = activeObstacles.length - 1; i >= 0; i--) {
       var obs = activeObstacles[i];
       obs.position.z += scrollSpeed * dt;
+      // Prevent residual rotation from pooled ramps
+      if (obs.userData.type !== 'ramp') {
+        obs.traverse(function(c) { if (c.isMesh) c.rotation.set(0, 0, 0); });
+      }
       if (obs.position.z > 15) {
         obstaclePool.returnToPool(obs);
         activeObstacles.splice(i, 1);
@@ -1983,9 +2076,11 @@
   function updateCamera() {
     var tx = playerX * 0.3;
     var bob = Math.sin(distance * 0.8) * 0.04;
-    var target = new THREE.Vector3(tx, 3.0 + bob, 5.5);
+    // Higher camera, steeper downhill angle
+    var target = new THREE.Vector3(tx, 4.0 + bob, 4.5);
     camera.position.lerp(target, 0.08);
-    camera.lookAt(playerX * 0.2, 0.3, -8);
+    // Look further down and ahead for dramatic downhill perspective
+    camera.lookAt(playerX * 0.2, -0.8, -10);
   }
 
   // ===================== SPEED & SCORE =====================
@@ -1999,7 +2094,7 @@
         targetSpeed *= BOOST_MULTIPLIER;
       }
     }
-    var accelRate = difficultyManager.isRestPhase() ? 0.15 : 0.5;
+    var accelRate = difficultyManager.isRestPhase() ? 0.3 : 0.8;
     if (scrollSpeed < targetSpeed) {
       scrollSpeed = Math.min(scrollSpeed + accelRate * dt, targetSpeed);
     } else {
@@ -2603,7 +2698,7 @@
 
   // ===================== PHASE 6: VISUAL POLISH =====================
   function updateSpeedLines() {
-    var maxSpd = SPEED_TABLE[2000] || 15;
+    var maxSpd = SPEED_TABLE[2000] || 17;
     var threshold = maxSpd * 0.5;
     var intensity = Math.max(0, (scrollSpeed - threshold) / (maxSpd - threshold));
     document.getElementById('speed-lines').style.opacity = intensity * 0.6;
@@ -2707,8 +2802,8 @@
           camera.fov = THREE.MathUtils.lerp(camera.fov, 60, 0.04);
         }
         camera.updateProjectionMatrix();
-        // Subtle forward lean for downhill feel
-        vehicleGroup.rotation.x = -0.05;
+        // Forward lean for downhill feel
+        vehicleGroup.rotation.x = -0.15;
       }
     } else if (gameState === 'gameover') {
       updateGameover(now);
