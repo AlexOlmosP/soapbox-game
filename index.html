@@ -553,54 +553,52 @@
 
   const scene = new THREE.Scene();
 
-  // City skyline background — painted canvas texture
+  // City skyline background — load image texture with procedural fallback
   function createCitySkylineBackground() {
+    // Try loading the skyline image
+    var texture = new THREE.TextureLoader().load('bg-skyline.png', function() {
+      // Image loaded successfully — update scene
+      scene.background = texture;
+    }, undefined, function() {
+      // Failed to load — use procedural fallback
+      console.warn('bg-skyline.png not found, using procedural background');
+    });
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+
+    // Return a procedural fallback that will be replaced when image loads
     var canvas = document.createElement('canvas');
     canvas.width = 512; canvas.height = 512;
     var ctx = canvas.getContext('2d');
-    // Sky gradient
+    // Warm sunset sky gradient matching the skyline image tones
     var skyGrad = ctx.createLinearGradient(0, 0, 0, 512);
-    skyGrad.addColorStop(0, '#1A3366');
-    skyGrad.addColorStop(0.4, '#3388CC');
-    skyGrad.addColorStop(0.7, '#55BBEE');
-    skyGrad.addColorStop(1.0, '#AADDFF');
+    skyGrad.addColorStop(0, '#2A1A44');
+    skyGrad.addColorStop(0.25, '#4A3366');
+    skyGrad.addColorStop(0.5, '#CC7744');
+    skyGrad.addColorStop(0.7, '#DDAA66');
+    skyGrad.addColorStop(1.0, '#887766');
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, 512, 512);
-    // Far city layer
-    ctx.fillStyle = 'rgba(50, 50, 70, 0.3)';
-    var buildings = [];
+    // City silhouettes
+    ctx.fillStyle = 'rgba(30, 25, 50, 0.6)';
     for (var x = 0; x < 512; x += 8 + Math.random() * 15) {
-      var h = 30 + Math.random() * 80;
-      var w = 8 + Math.random() * 20;
-      buildings.push({x:x, w:w, h:h});
-      ctx.fillRect(x, 350 - h * 0.5, w, h * 0.5);
+      var h = 30 + Math.random() * 100;
+      ctx.fillRect(x, 320 - h, 8 + Math.random() * 18, h);
     }
-    // Near city layer
-    ctx.fillStyle = 'rgba(35, 35, 55, 0.5)';
-    for (var i = 0; i < buildings.length; i++) {
-      var b = buildings[i];
-      if (Math.random() < 0.6) ctx.fillRect(b.x + 3, 350 - b.h * 0.8, b.w * 0.8, b.h * 0.8);
+    // Warm window lights
+    ctx.fillStyle = 'rgba(255, 220, 100, 0.5)';
+    for (var i = 0; i < 100; i++) {
+      ctx.fillRect(Math.random() * 512, 240 + Math.random() * 70, 2, 3);
     }
-    // Lit windows
-    ctx.fillStyle = 'rgba(255, 255, 150, 0.4)';
-    for (var i = 0; i < 80; i++) {
-      ctx.fillRect(Math.random() * 512, 290 + Math.random() * 50, 2, 2);
-    }
-    // Horizon glow
-    var glow = ctx.createLinearGradient(0, 330, 0, 370);
-    glow.addColorStop(0, 'rgba(255, 200, 150, 0)');
-    glow.addColorStop(0.5, 'rgba(255, 200, 150, 0.15)');
-    glow.addColorStop(1, 'rgba(255, 200, 150, 0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 330, 512, 40);
-    var texture = new THREE.CanvasTexture(canvas);
-    texture.minFilter = THREE.LinearFilter;
-    return texture;
+    var fallback = new THREE.CanvasTexture(canvas);
+    fallback.minFilter = THREE.LinearFilter;
+    return fallback;
   }
 
   var citySkylineTexture = createCitySkylineBackground();
   scene.background = citySkylineTexture;
-  scene.fog = new THREE.Fog(0x44BBEE, 18, 50);
+  // Warm hazy fog that fades into skyline — pushed back so city is visible
+  scene.fog = new THREE.Fog(0x997788, 30, 70);
 
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(3, 5, 8);
@@ -668,7 +666,7 @@
   }
   function setupRaceLighting() {
     scene.background = citySkylineTexture;
-    scene.fog = new THREE.Fog(0x44BBEE, 18, 50);
+    scene.fog = new THREE.Fog(0x997788, 30, 70);
     ambientLight.color.set(0xFFEEFF);
     ambientLight.intensity = 0.5;
     sunLight.intensity = 0.9;
@@ -1668,11 +1666,11 @@
 
   // ===================== ENVIRONMENT ZONES =====================
   var ENVIRONMENT_ZONES = [
-    { name:'suburban',    maxDist:500,  road:0x2A2A3E, ground:0x888899, sky:0x44BBEE, fog:0x44BBEE },
-    { name:'urban',       maxDist:1000, road:0x222233, ground:0x777788, sky:0x3399DD, fog:0x3399DD },
-    { name:'park',        maxDist:1500, road:0x2A3A2A, ground:0x779977, sky:0x55DDFF, fog:0x55DDFF },
-    { name:'industrial',  maxDist:2000, road:0x2A2A2A, ground:0x666677, sky:0x6688BB, fog:0x6688BB },
-    { name:'sunset',      maxDist:99999, road:0x332233, ground:0x887766, sky:0xFF5533, fog:0xEE4422 }
+    { name:'suburban',    maxDist:500,  road:0x2A2A3E, ground:0x888899, fog:0x997788 },
+    { name:'urban',       maxDist:1000, road:0x222233, ground:0x777788, fog:0x887799 },
+    { name:'park',        maxDist:1500, road:0x2A3A2A, ground:0x779977, fog:0x889977 },
+    { name:'industrial',  maxDist:2000, road:0x2A2A2A, ground:0x666677, fog:0x776688 },
+    { name:'sunset',      maxDist:99999, road:0x332233, ground:0x887766, fog:0xAA7755 }
   ];
   var currentZone = null;
 
