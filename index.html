@@ -349,6 +349,7 @@
   const CAM_LOOK_AHEAD = new THREE.Vector3(0, 0.5, -8);
   const PLAYER_HITBOX = new THREE.Vector3(0.6, 0.7, 1.0);
   const MAX_DT = 0.05;
+  const DOWNHILL_SLOPE = 0.06; // Y drops 0.06 per meter of Z distance
 
   const OBSTACLE_HITBOXES = {
     barrel: new THREE.Vector3(0.6, 0.8, 0.6),
@@ -868,6 +869,7 @@
         scene.add(seg);
       }
       seg.position.z = -i * SEGMENT_LENGTH;
+      seg.position.y = seg.position.z * DOWNHILL_SLOPE;
       seg.visible = true;
     }
   }
@@ -876,6 +878,8 @@
     // Move all segments toward camera
     for (var i = 0; i < segmentPool.length; i++) {
       segmentPool[i].position.z += scrollSpeed * dt;
+      // Downhill: Y follows Z so segments ahead are lower
+      segmentPool[i].position.y = segmentPool[i].position.z * DOWNHILL_SLOPE;
     }
     // Recycle segments that passed behind camera
     for (var i = 0; i < segmentPool.length; i++) {
@@ -887,6 +891,7 @@
         }
         var newZ = minZ - SEGMENT_LENGTH;
         segmentPool[i].position.z = newZ;
+        segmentPool[i].position.y = newZ * DOWNHILL_SLOPE;
         spawnSceneryForZ(newZ);
       }
     }
@@ -1226,12 +1231,13 @@
     for (var i = activeCollectibles.length - 1; i >= 0; i--) {
       var item = activeCollectibles[i];
       item.position.z += scrollSpeed * dt;
-      // Spin and bob
+      // Spin and bob + downhill slope offset
+      var slopeY = item.position.z * DOWNHILL_SLOPE;
       item.rotation.y = time * 0.003;
       if (item.userData.elevated) {
-        item.position.y = (item.userData.elevatedY || 2.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
+        item.position.y = slopeY + (item.userData.elevatedY || 2.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
       } else {
-        item.position.y = (item.userData.collectType === 'coin' ? 0.8 : 1.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
+        item.position.y = slopeY + (item.userData.collectType === 'coin' ? 0.8 : 1.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
       }
       // Recycle
       if (item.position.z > 15) {
@@ -2025,6 +2031,8 @@
     for (var i = activeObstacles.length - 1; i >= 0; i--) {
       var obs = activeObstacles[i];
       obs.position.z += scrollSpeed * dt;
+      // Follow downhill slope
+      obs.position.y = obs.position.z * DOWNHILL_SLOPE + (obs.userData.baseY || 0);
       // Prevent residual rotation from pooled ramps
       if (obs.userData.type !== 'ramp') {
         obs.traverse(function(c) { if (c.isMesh) c.rotation.set(0, 0, 0); });
@@ -2052,7 +2060,7 @@
       if (!obs.visible) continue;
       if (obs.position.z < -2 || obs.position.z > 3) continue;
       var hb = obs.userData.hitbox;
-      var obsCenter = new THREE.Vector3(obs.position.x, hb.y / 2, obs.position.z);
+      var obsCenter = new THREE.Vector3(obs.position.x, obs.position.y + hb.y / 2, obs.position.z);
       obsBox.setFromCenterAndSize(obsCenter, hb);
       if (playerBox.intersectsBox(obsBox)) {
         if (obs.userData.type === 'ramp') {
