@@ -40,8 +40,15 @@
     width: 100%;
     height: 100%;
     touch-action: none;
-    background: #000;
+    background: #1a1a2e;
     font-family: var(--font-body);
+  }
+  /* City skyline background behind the WebGL canvas */
+  #skyline-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url('bg-skyline.png') center center / cover no-repeat;
+    z-index: 0;
   }
   canvas { display: block; }
 
@@ -197,6 +204,7 @@
 </style>
 </head>
 <body>
+<div id="skyline-bg"></div>
 
 <div id="blackout" style="position:absolute;top:0;left:0;right:0;bottom:0;background:#000;z-index:50;pointer-events:none;opacity:0;transition:opacity 0.2s;display:none;"></div>
 
@@ -542,61 +550,21 @@
   const effectsLayer = document.getElementById('effects-layer');
 
   // ===================== RENDERER & SCENE =====================
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.NoToneMapping;
+  renderer.setClearColor(0x000000, 0); // transparent clear
+  renderer.domElement.style.position = 'relative';
+  renderer.domElement.style.zIndex = '1';
   document.body.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
 
-  // City skyline background — load image texture with procedural fallback
-  function createCitySkylineBackground() {
-    // Try loading the skyline image
-    var texture = new THREE.TextureLoader().load('bg-skyline.png', function() {
-      // Image loaded successfully — update scene
-      scene.background = texture;
-    }, undefined, function() {
-      // Failed to load — use procedural fallback
-      console.warn('bg-skyline.png not found, using procedural background');
-    });
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
-
-    // Return a procedural fallback that will be replaced when image loads
-    var canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 512;
-    var ctx = canvas.getContext('2d');
-    // Warm sunset sky gradient matching the skyline image tones
-    var skyGrad = ctx.createLinearGradient(0, 0, 0, 512);
-    skyGrad.addColorStop(0, '#2A1A44');
-    skyGrad.addColorStop(0.25, '#4A3366');
-    skyGrad.addColorStop(0.5, '#CC7744');
-    skyGrad.addColorStop(0.7, '#DDAA66');
-    skyGrad.addColorStop(1.0, '#887766');
-    ctx.fillStyle = skyGrad;
-    ctx.fillRect(0, 0, 512, 512);
-    // City silhouettes
-    ctx.fillStyle = 'rgba(30, 25, 50, 0.6)';
-    for (var x = 0; x < 512; x += 8 + Math.random() * 15) {
-      var h = 30 + Math.random() * 100;
-      ctx.fillRect(x, 320 - h, 8 + Math.random() * 18, h);
-    }
-    // Warm window lights
-    ctx.fillStyle = 'rgba(255, 220, 100, 0.5)';
-    for (var i = 0; i < 100; i++) {
-      ctx.fillRect(Math.random() * 512, 240 + Math.random() * 70, 2, 3);
-    }
-    var fallback = new THREE.CanvasTexture(canvas);
-    fallback.minFilter = THREE.LinearFilter;
-    return fallback;
-  }
-
-  var citySkylineTexture = createCitySkylineBackground();
-  scene.background = citySkylineTexture;
+  scene.background = null; // transparent — CSS bg-skyline.png shows through
   // Warm hazy fog that fades into skyline — pushed back so city is visible
   scene.fog = new THREE.Fog(0x997788, 30, 70);
 
@@ -665,7 +633,7 @@
     scene.fog = new THREE.Fog(0x3A6EA5, 8, 25);
   }
   function setupRaceLighting() {
-    scene.background = citySkylineTexture;
+    scene.background = null; // transparent — CSS skyline shows through
     scene.fog = new THREE.Fog(0x997788, 30, 70);
     ambientLight.color.set(0xFFEEFF);
     ambientLight.intensity = 0.5;
@@ -867,6 +835,11 @@
     return group;
   }
 
+  // Track group tilts the entire road as one piece — no stair steps
+  var trackGroup = new THREE.Group();
+  trackGroup.rotation.x = -Math.atan(DOWNHILL_SLOPE); // tilt downhill
+  scene.add(trackGroup);
+
   function initTrack() {
     var totalSegments = VISIBLE_SEGMENTS + 2;
     for (var i = 0; i < totalSegments; i++) {
@@ -876,10 +849,10 @@
       } else {
         seg = createSegment();
         segmentPool.push(seg);
-        scene.add(seg);
+        trackGroup.add(seg);
       }
       seg.position.z = -i * SEGMENT_LENGTH;
-      seg.position.y = seg.position.z * DOWNHILL_SLOPE;
+      seg.position.y = 0;
       seg.visible = true;
     }
   }
@@ -888,8 +861,6 @@
     // Move all segments toward camera
     for (var i = 0; i < segmentPool.length; i++) {
       segmentPool[i].position.z += scrollSpeed * dt;
-      // Downhill: Y follows Z so segments ahead are lower
-      segmentPool[i].position.y = segmentPool[i].position.z * DOWNHILL_SLOPE;
     }
     // Recycle segments that passed behind camera
     for (var i = 0; i < segmentPool.length; i++) {
@@ -901,7 +872,7 @@
         }
         var newZ = minZ - SEGMENT_LENGTH;
         segmentPool[i].position.z = newZ;
-        segmentPool[i].position.y = newZ * DOWNHILL_SLOPE;
+        segmentPool[i].position.y = 0;
         spawnSceneryForZ(newZ);
       }
     }
