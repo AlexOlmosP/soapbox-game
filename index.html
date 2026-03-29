@@ -453,7 +453,7 @@
     rocket:  { w:0.5, h:0.4, d:1.6 },
     shoe:    { w:0.7, h:0.6, d:1.3 },
     box:     { w:0.6, h:0.5, d:1.0 },
-    banana:  { w:0.5, h:0.5, d:1.5 },
+    banana:  { w:0.7, h:0.6, d:1.8 },
     couch:   { w:0.7, h:0.6, d:1.1 }
   };
   var WHEEL_RADIUS = {
@@ -464,7 +464,7 @@
     rocket:  [{x:-0.30,z:-0.35},{x:0.30,z:-0.35},{x:-0.30,z:0.35},{x:0.30,z:0.35}],
     shoe:    [{x:-0.38,z:-0.25},{x:0.38,z:-0.25},{x:-0.38,z:0.25},{x:0.38,z:0.25}],
     box:     [{x:-0.32,z:-0.22},{x:0.32,z:-0.22},{x:-0.32,z:0.22},{x:0.32,z:0.22}],
-    banana:  [{x:-0.35,z:-0.35},{x:0.35,z:-0.35},{x:-0.35,z:0.35},{x:0.35,z:0.35}],
+    banana:  [{x:-0.30,z:-0.55},{x:0.30,z:-0.55},{x:-0.30,z:0.55},{x:0.30,z:0.55}],
     couch:   [{x:-0.33,z:-0.25},{x:0.33,z:-0.25},{x:-0.33,z:0.25},{x:0.33,z:0.25}]
   };
   var CHASSIS_DECOS = {
@@ -987,19 +987,32 @@
     if (glbFile) {
       loadGLB(glbFile).then(function(model) {
         toonifyModel(model, vehicleData.chassis.color);
-        // Scale to match expected chassis dimensions
+        // Measure raw model size
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
-        var scaleX = cd.w / Math.max(size.x, 0.01);
-        var scaleY = cd.h / Math.max(size.y, 0.01);
-        var scaleZ = cd.d / Math.max(size.z, 0.01);
-        var uniformScale = Math.min(scaleX, scaleY, scaleZ) * 1.2; // slightly larger
-        model.scale.setScalar(uniformScale);
-        // Center the model
+        // Auto-rotate: if model is wider (X) than deep (Z), rotate 90° so it points forward
+        if (size.x > size.z * 1.2) {
+          model.rotation.y = Math.PI / 2;
+          // Re-measure after rotation
+          box.setFromObject(model);
+          size = box.getSize(new THREE.Vector3());
+        }
+        // Scale to fill target chassis dims (use the largest ratio to fill, not shrink)
+        var targetLength = cd.d; // Z = forward
+        var targetWidth = cd.w;  // X = side
+        var targetHeight = cd.h; // Y = up
+        var scaleByLength = targetLength / Math.max(size.z, 0.01);
+        var scaleByWidth = targetWidth / Math.max(size.x, 0.01);
+        var scaleByHeight = targetHeight / Math.max(size.y, 0.01);
+        // Use length as primary scale — the chassis should match its Z dimension
+        var finalScale = scaleByLength;
+        model.scale.multiplyScalar(finalScale);
+        // Re-center after scaling
         box.setFromObject(model);
         var center = box.getCenter(new THREE.Vector3());
-        model.position.sub(center);
-        model.position.y = -box.min.y; // sit on ground
+        model.position.x -= center.x;
+        model.position.z -= center.z;
+        model.position.y -= box.min.y; // sit on ground
         model.name = 'chassis';
         // Insert at beginning (before wheels/driver)
         vehicleGroup.children.unshift(model);
