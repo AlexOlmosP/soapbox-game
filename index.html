@@ -938,9 +938,10 @@
   }
 
   // GLB asset map — add entries as 3D assets are created
+  // rotY: extra Y rotation to fix orientation (radians)
   var GLB_ASSETS = {
     chassis: {
-      banana: 'Meshy_AI_banana_3d_0329211148_texture.glb'
+      banana: { file: 'Meshy_AI_banana_3d_0329211148_texture.glb', rotY: Math.PI }
     }
   };
   var glbCache = {};
@@ -983,8 +984,10 @@
     var chassisType = vehicleData.chassis.type;
 
     // Check if GLB asset exists for this chassis
-    var glbFile = GLB_ASSETS.chassis && GLB_ASSETS.chassis[chassisType];
-    if (glbFile) {
+    var glbAsset = GLB_ASSETS.chassis && GLB_ASSETS.chassis[chassisType];
+    if (glbAsset) {
+      var glbFile = glbAsset.file || glbAsset;
+      var extraRotY = glbAsset.rotY || 0;
       loadGLB(glbFile).then(function(model) {
         toonifyModel(model, vehicleData.chassis.color);
         // Measure raw model size
@@ -995,6 +998,13 @@
           model.rotation.y = Math.PI / 2;
           // Re-measure after rotation
           box.setFromObject(model);
+          size = box.getSize(new THREE.Vector3());
+        }
+        // Per-model rotation fix (e.g. flip 180° if model faces backward)
+        if (extraRotY) {
+          model.rotation.y += extraRotY;
+          box.setFromObject(model);
+        }
           size = box.getSize(new THREE.Vector3());
         }
         // Scale to fill target chassis dims (use the largest ratio to fill, not shrink)
