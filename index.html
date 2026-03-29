@@ -630,8 +630,8 @@
 
   // ===================== LIGHTING MODES =====================
   function setupTitleLighting() {
-    scene.background = new THREE.Color(0x3A6EA5);
-    scene.fog = new THREE.Fog(0x3A6EA5, 8, 25);
+    scene.background = null; // transparent — CSS skyline shows through
+    scene.fog = new THREE.Fog(0x997788, 8, 25);
   }
   function setupRaceLighting() {
     scene.background = null; // transparent — CSS skyline shows through
