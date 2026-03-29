@@ -342,6 +342,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 (function() {
   // ===================== CONSTANTS =====================
@@ -936,6 +937,42 @@
     return group;
   }
 
+  // GLB asset map — add entries as 3D assets are created
+  var GLB_ASSETS = {
+    chassis: {
+      banana: 'Meshy_AI_banana_3d_0329211148_texture.glb'
+    }
+  };
+  var glbCache = {};
+
+  function loadGLB(url) {
+    if (glbCache[url]) return Promise.resolve(glbCache[url].clone());
+    return new Promise(function(resolve, reject) {
+      var loader = new THREE.GLTFLoader();
+      loader.load(url, function(gltf) {
+        var model = gltf.scene;
+        glbCache[url] = model;
+        resolve(model.clone());
+      }, undefined, function(err) {
+        console.warn('GLB load failed:', url, err);
+        reject(err);
+      });
+    });
+  }
+
+  function toonifyModel(model, color) {
+    model.traverse(function(child) {
+      if (child.isMesh && child.material) {
+        var origColor = color ? new THREE.Color(color) :
+          (child.material.color ? child.material.color.clone() : new THREE.Color(0xcccccc));
+        child.material = createToonMaterial(origColor);
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+    addOutline(model);
+  }
+
   function assembleVehicle() {
     while (vehicleGroup.children.length > 0) {
       vehicleGroup.remove(vehicleGroup.children[0]);
@@ -943,8 +980,43 @@
     wheels = [];
 
     var cd = CHASSIS_DIMS[vehicleData.chassis.type];
+    var chassisType = vehicleData.chassis.type;
 
-    // Chassis body
+    // Check if GLB asset exists for this chassis
+    var glbFile = GLB_ASSETS.chassis && GLB_ASSETS.chassis[chassisType];
+    if (glbFile) {
+      loadGLB(glbFile).then(function(model) {
+        toonifyModel(model, vehicleData.chassis.color);
+        // Scale to match expected chassis dimensions
+        var box = new THREE.Box3().setFromObject(model);
+        var size = box.getSize(new THREE.Vector3());
+        var scaleX = cd.w / Math.max(size.x, 0.01);
+        var scaleY = cd.h / Math.max(size.y, 0.01);
+        var scaleZ = cd.d / Math.max(size.z, 0.01);
+        var uniformScale = Math.min(scaleX, scaleY, scaleZ) * 1.2; // slightly larger
+        model.scale.setScalar(uniformScale);
+        // Center the model
+        box.setFromObject(model);
+        var center = box.getCenter(new THREE.Vector3());
+        model.position.sub(center);
+        model.position.y = -box.min.y; // sit on ground
+        model.name = 'chassis';
+        // Insert at beginning (before wheels/driver)
+        vehicleGroup.children.unshift(model);
+        model.parent = vehicleGroup;
+      }).catch(function() {
+        // Fallback: build placeholder chassis
+        buildPlaceholderChassisInGroup(cd, chassisType);
+      });
+    } else {
+      buildPlaceholderChassisInGroup(cd, chassisType);
+    }
+
+    // Build rest of vehicle (wheels, driver, decos) immediately
+    buildVehicleExtras(cd);
+  }
+
+  function buildPlaceholderChassisInGroup(cd, chassisType) {
     var chassisGeo = new THREE.BoxGeometry(cd.w, cd.h, cd.d);
     var chassisMat = createToonMaterial(vehicleData.chassis.color, 'soft');
     var chassis = new THREE.Mesh(chassisGeo, chassisMat);
@@ -953,19 +1025,17 @@
     chassis.name = 'chassis';
     vehicleGroup.add(chassis);
 
-    // Type-specific extras
-    if (vehicleData.chassis.type === 'rocket') {
+    if (chassisType === 'rocket') {
       var noseGeo = new THREE.ConeGeometry(cd.d/2, 0.4, 8);
       noseGeo.rotateZ(-Math.PI/2);
       var nose = new THREE.Mesh(noseGeo, chassisMat);
       nose.position.set(0, cd.h/2, -cd.w/2 - 0.15);
       nose.rotation.x = Math.PI/2;
       vehicleGroup.add(nose);
-    } else if (vehicleData.chassis.type === 'banana') {
-      chassis.scale.y = 0.7;
-      chassis.rotation.z = 0.15;
     }
+  }
 
+  function buildVehicleExtras(cd) {
     // Wheels
     var wr = WHEEL_RADIUS[vehicleData.wheels.type];
     var wheelGeo = new THREE.CylinderGeometry(wr, wr, 0.12, 16);
@@ -1004,7 +1074,7 @@
       vehicleGroup.add(deco);
     });
 
-    // Outlines
+    // Outlines (skip GLB chassis — it gets its own outlines from toonifyModel)
     addOutline(vehicleGroup, 0.035);
 
     // Contact shadow
