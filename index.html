@@ -1136,7 +1136,7 @@
   function initObstacles() {
     obstaclePool = new ObjectPool(function() {
       var obj = createPlaceholderObstacle();
-      scene.add(obj);
+      trackGroup.add(obj); // In trackGroup so tilt handles slope — no per-frame Y updates
       return obj;
     }, 20);
   }
@@ -1168,12 +1168,12 @@
   function initCollectibles() {
     coinPool = new ObjectPool(function() {
       var obj = createPlaceholderCoin();
-      scene.add(obj);
+      trackGroup.add(obj); // In trackGroup so tilt handles slope
       return obj;
     }, 40);
     specialPool = new ObjectPool(function() {
       var obj = createPlaceholderSpecial();
-      scene.add(obj);
+      trackGroup.add(obj); // In trackGroup so tilt handles slope
       return obj;
     }, 10);
   }
@@ -1212,14 +1212,10 @@
     for (var i = activeCollectibles.length - 1; i >= 0; i--) {
       var item = activeCollectibles[i];
       item.position.z += scrollSpeed * dt;
-      // Spin and bob + downhill slope offset
-      var slopeY = item.position.z * DOWNHILL_SLOPE;
+      // Spin and bob — Y base set at spawn, no slope recalc (trackGroup handles tilt)
       item.rotation.y = time * 0.003;
-      if (item.userData.elevated) {
-        item.position.y = slopeY + (item.userData.elevatedY || 2.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
-      } else {
-        item.position.y = slopeY + (item.userData.collectType === 'coin' ? 0.8 : 1.0) + Math.sin(time * 0.004 + item.position.z) * 0.15;
-      }
+      var baseY = item.userData.elevated ? (item.userData.elevatedY || 2.0) : (item.userData.collectType === 'coin' ? 0.8 : 1.0);
+      item.position.y = baseY + Math.sin(time * 0.004 + item.position.z) * 0.15;
       // Recycle
       if (item.position.z > 15) {
         if (item.userData.collectType === 'coin') coinPool.returnToPool(item);
@@ -1230,13 +1226,16 @@
   }
 
   function checkCollectibles() {
-    var pCenter = new THREE.Vector3(playerX, 0.4 + playerGroup.position.y, 0);
+    var pY = 0.4 + playerGroup.position.y;
+    var pCenter = new THREE.Vector3(playerX, pY, 0);
     var pBox = new THREE.Box3().setFromCenterAndSize(pCenter, PLAYER_HITBOX);
     for (var i = activeCollectibles.length - 1; i >= 0; i--) {
       var item = activeCollectibles[i];
       if (!item.visible) continue;
-      if (item.position.z < -2 || item.position.z > 3) continue;
-      var iBox = new THREE.Box3().setFromCenterAndSize(item.position, COLLECTIBLE_HITBOX);
+      // Get world position (collectibles are in trackGroup)
+      item.getWorldPosition(_worldPos);
+      if (_worldPos.z < -2 || _worldPos.z > 3) continue;
+      var iBox = new THREE.Box3().setFromCenterAndSize(_worldPos, COLLECTIBLE_HITBOX);
       if (pBox.intersectsBox(iBox)) {
         collectItem(item);
         if (item.userData.collectType === 'coin') coinPool.returnToPool(item);
@@ -2012,12 +2011,7 @@
     for (var i = activeObstacles.length - 1; i >= 0; i--) {
       var obs = activeObstacles[i];
       obs.position.z += scrollSpeed * dt;
-      // Follow downhill slope
-      obs.position.y = obs.position.z * DOWNHILL_SLOPE + (obs.userData.baseY || 0);
-      // Prevent residual rotation from pooled ramps
-      if (obs.userData.type !== 'ramp') {
-        obs.traverse(function(c) { if (c.isMesh) c.rotation.set(0, 0, 0); });
-      }
+      // Y is set once at spawn — NEVER updated per frame
       if (obs.position.z > 15) {
         obstaclePool.returnToPool(obs);
         activeObstacles.splice(i, 1);
@@ -2029,19 +2023,22 @@
   var playerBox = new THREE.Box3();
   var obsBox = new THREE.Box3();
 
+  var _worldPos = new THREE.Vector3();
   function checkCollisions() {
     if (isJumping && playerGroup.position.y > 0.5) return;
 
-    var half = PLAYER_HITBOX.clone().multiplyScalar(0.5);
-    var center = new THREE.Vector3(playerX, 0.4, 0);
+    var pY = 0.4 + playerGroup.position.y;
+    var center = new THREE.Vector3(playerX, pY, 0);
     playerBox.setFromCenterAndSize(center, PLAYER_HITBOX);
 
     for (var i = 0; i < activeObstacles.length; i++) {
       var obs = activeObstacles[i];
       if (!obs.visible) continue;
-      if (obs.position.z < -2 || obs.position.z > 3) continue;
+      // Get world position (obstacles are in trackGroup)
+      obs.getWorldPosition(_worldPos);
+      if (_worldPos.z < -2 || _worldPos.z > 3) continue;
       var hb = obs.userData.hitbox;
-      var obsCenter = new THREE.Vector3(obs.position.x, obs.position.y + hb.y / 2, obs.position.z);
+      var obsCenter = new THREE.Vector3(_worldPos.x, _worldPos.y + hb.y / 2, _worldPos.z);
       obsBox.setFromCenterAndSize(obsCenter, hb);
       if (playerBox.intersectsBox(obsBox)) {
         if (obs.userData.type === 'ramp') {
