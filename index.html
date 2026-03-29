@@ -630,10 +630,13 @@
 
   // ===================== LIGHTING MODES =====================
   function setupTitleLighting() {
-    scene.background = null; // transparent — CSS skyline shows through
+    scene.background = null;
     scene.fog = new THREE.Fog(0x997788, 8, 25);
+    // Hide 3D canvas — title screen is just UI over the skyline image
+    renderer.domElement.style.display = 'none';
   }
   function setupRaceLighting() {
+    renderer.domElement.style.display = 'block';
     scene.background = null; // transparent — CSS skyline shows through
     scene.fog = new THREE.Fog(0x997788, 30, 70);
     ambientLight.color.set(0xFFEEFF);
@@ -643,6 +646,7 @@
     hemiLight.intensity = 0.35;
   }
   function setupGarageLighting() {
+    renderer.domElement.style.display = 'block';
     scene.background = new THREE.Color(0x1E1E2E);
     scene.fog = new THREE.Fog(0x1E1E2E, 8, 25);
     ambientLight.color.set(0xFFEEFF);
