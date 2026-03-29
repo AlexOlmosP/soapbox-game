@@ -2918,6 +2918,12 @@
     document.getElementById('title-highscore').textContent = getHighScore().toLocaleString();
     document.getElementById('title-coins').textContent = (parseInt(localStorage.getItem('soapbox:total-coins') || '0')).toLocaleString();
 
+    // Wire up title button (backup for onclick)
+    document.getElementById('tap-to-start').addEventListener('click', function(e) {
+      e.stopPropagation();
+      window.startFromTitle();
+    });
+
     requestAnimationFrame(gameLoop);
   }
 
