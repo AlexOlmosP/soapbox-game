@@ -358,7 +358,7 @@
   const CAM_LOOK_AHEAD = new THREE.Vector3(0, 0.5, -8);
   const PLAYER_HITBOX = new THREE.Vector3(0.6, 0.7, 1.0);
   const MAX_DT = 0.05;
-  const DOWNHILL_SLOPE = 0.06; // Y drops 0.06 per meter of Z distance
+  const DOWNHILL_SLOPE = 0.18; // Y drops 0.18 per meter of Z — steep visible downhill
 
   const OBSTACLE_HITBOXES = {
     barrel: new THREE.Vector3(0.6, 0.8, 0.6),
@@ -2167,11 +2167,11 @@
   function updateCamera() {
     var tx = playerX * 0.3;
     var bob = Math.sin(distance * 0.8) * 0.04;
-    // Moderate height, further back — like Subway Surfers chase cam
-    var target = new THREE.Vector3(tx, 3.8 + bob, 5.0);
+    // Chase cam — high enough to see the road descending ahead
+    var target = new THREE.Vector3(tx, 4.2 + bob, 4.5);
     camera.position.lerp(target, 0.08);
-    // Look slightly down and far ahead — subtle downhill, not drone view
-    camera.lookAt(playerX * 0.2, 0.3, -10);
+    // Look down at road to show the descent
+    camera.lookAt(playerX * 0.2, -0.5, -10);
   }
 
   // ===================== SPEED & SCORE =====================
