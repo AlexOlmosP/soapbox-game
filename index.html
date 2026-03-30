@@ -697,10 +697,63 @@
     0x9988AA, // lavender grey
   ];
   var ROOF_COLORS = [0xCC4433, 0x886644, 0xAA7755, 0x556677, 0x995544];
-  var AWNING_COLORS = [0xCC5533, 0xDD8844, 0x887766, 0xAA6655, 0xBB7744];
-  var WIN_DARK_MAT = new THREE.MeshBasicMaterial({ color: 0x1A1A2A });
-  var WIN_LIT_MAT = new THREE.MeshBasicMaterial({ color: 0xFFDD77 });
-  var WIN_GEO = new THREE.PlaneGeometry(0.4, 0.55);
+  // ===================== KENNEY BUILDING ASSETS =====================
+  var KENNEY_BUILDINGS = [
+    'assets/kenney/building-small-a.glb',
+    'assets/kenney/building-small-b.glb',
+    'assets/kenney/building-small-c.glb',
+    'assets/kenney/building-small-d.glb',
+    'assets/kenney/building-garage.glb'
+  ];
+  var KENNEY_TREES = [
+    'assets/kenney/grass-trees.glb',
+    'assets/kenney/grass-trees-tall.glb'
+  ];
+  var kenneyBuildingCache = {};
+  var kenneyModelsLoaded = false;
+
+  function preloadKenneyAssets() {
+    var loader = new THREE.GLTFLoader();
+    var toLoad = KENNEY_BUILDINGS.concat(KENNEY_TREES);
+    var loaded = 0;
+    toLoad.forEach(function(path) {
+      loader.load(path, function(gltf) {
+        kenneyBuildingCache[path] = gltf.scene;
+        loaded++;
+        if (loaded === toLoad.length) kenneyModelsLoaded = true;
+      }, undefined, function() {
+        // Failed — will fall back to procedural
+        loaded++;
+        if (loaded === toLoad.length) kenneyModelsLoaded = true;
+      });
+    });
+  }
+
+  function getKenneyBuilding() {
+    var path = KENNEY_BUILDINGS[Math.floor(Math.random() * KENNEY_BUILDINGS.length)];
+    var cached = kenneyBuildingCache[path];
+    if (!cached) return null;
+    return cached.clone();
+  }
+
+  function getKenneyTree() {
+    var path = KENNEY_TREES[Math.floor(Math.random() * KENNEY_TREES.length)];
+    var cached = kenneyBuildingCache[path];
+    if (!cached) return null;
+    return cached.clone();
+  }
+
+  // Fallback procedural building (used if GLBs haven't loaded yet)
+  function createProceduralBuilding(w, h, d, color) {
+    var group = new THREE.Group();
+    var buildGeo = new THREE.BoxGeometry(d, h, w);
+    var building = new THREE.Mesh(buildGeo, createToonMaterial(color));
+    building.position.y = h / 2;
+    building.castShadow = true;
+    building.userData.noOutline = true;
+    group.add(building);
+    return group;
+  }
 
   function createBuildingRow(side, segLen) {
     var group = new THREE.Group();
@@ -708,73 +761,52 @@
     var z = -segLen / 2;
 
     while (z < segLen / 2 - 0.5) {
-      var w = 1.8 + Math.random() * 2.5;
-      var h = 3 + Math.random() * 5;
-      var d = 2.5 + Math.random() * 1.5;
-      var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+      var spacing = 2.0 + Math.random() * 1.5;
+      var model = getKenneyBuilding();
 
-      // Main building body
-      var buildGeo = new THREE.BoxGeometry(d, h, w);
-      var buildMat = createToonMaterial(color);
-      var building = new THREE.Mesh(buildGeo, buildMat);
-      building.position.set(xBase + side * d / 2, h / 2, z + w / 2);
-      building.castShadow = true;
-      building.userData.noOutline = true;
-      group.add(building);
+      if (model) {
+        // Measure and scale Kenney model
+        var box = new THREE.Box3().setFromObject(model);
+        var size = box.getSize(new THREE.Vector3());
+        // Scale to fit: height 3-7m, width ~2-3m along street
+        var targetH = 3 + Math.random() * 4;
+        var scale = targetH / Math.max(size.y, 0.1);
+        model.scale.setScalar(scale);
+        // Re-measure after scale
+        box.setFromObject(model);
+        size = box.getSize(new THREE.Vector3());
+        // Position: flush against road side
+        model.position.set(xBase + side * size.x / 2, -box.min.y, z + size.z / 2);
+        // Face the road
+        if (side > 0) model.rotation.y = Math.PI;
+        model.userData.noOutline = true;
+        group.add(model);
+        z += size.z + 0.1;
+      } else {
+        // Fallback: procedural box building
+        var w = 1.8 + Math.random() * 2.5;
+        var h = 3 + Math.random() * 5;
+        var d = 2.5 + Math.random() * 1.5;
+        var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+        var bld = createProceduralBuilding(w, h, d, color);
+        bld.position.set(xBase + side * d / 2, 0, z + w / 2);
+        group.add(bld);
+        z += w + 0.15;
+      }
 
-      // Colored roof accent
-      var roofColor = ROOF_COLORS[Math.floor(Math.random() * ROOF_COLORS.length)];
-      var roofGeo = new THREE.BoxGeometry(d + 0.15, 0.2, w + 0.15);
-      var roof = new THREE.Mesh(roofGeo, createToonMaterial(roofColor));
-      roof.position.set(xBase + side * d / 2, h + 0.1, z + w / 2);
-      roof.userData.noOutline = true;
-      group.add(roof);
-
-      // Windows on the road-facing side
-      var winRows = Math.max(1, Math.floor((h - 1) / 1.2));
-      var winCols = Math.max(1, Math.floor(w / 1.0));
-
-      for (var wy = 0; wy < winRows; wy++) {
-        for (var wz = 0; wz < winCols; wz++) {
-          var win = new THREE.Mesh(WIN_GEO, Math.random() < 0.35 ? WIN_LIT_MAT : WIN_DARK_MAT);
-          var winX = xBase - side * 0.01;
-          win.position.set(winX, 1.2 + wy * 1.2, z + 0.5 + wz * 1.0);
-          if (side < 0) win.rotation.y = Math.PI;
-          win.userData.noOutline = true;
-          group.add(win);
+      // Tree between buildings (30% chance)
+      if (Math.random() < 0.3) {
+        var tree = getKenneyTree();
+        if (tree) {
+          var treeBox = new THREE.Box3().setFromObject(tree);
+          var treeSize = treeBox.getSize(new THREE.Vector3());
+          var treeScale = (1.5 + Math.random()) / Math.max(treeSize.y, 0.1);
+          tree.scale.setScalar(treeScale);
+          tree.position.set(xBase - side * 0.8, 0, z);
+          tree.userData.noOutline = true;
+          group.add(tree);
         }
       }
-
-      // Ground-level awning (40% chance)
-      if (Math.random() < 0.4) {
-        var awColor = AWNING_COLORS[Math.floor(Math.random() * AWNING_COLORS.length)];
-        var awGeo = new THREE.BoxGeometry(0.8, 0.05, w * 0.6);
-        var awn = new THREE.Mesh(awGeo, createToonMaterial(awColor));
-        awn.position.set(xBase - side * 0.3, 1.8, z + w / 2);
-        awn.rotation.z = side * 0.15;
-        awn.userData.noOutline = true;
-        group.add(awn);
-      }
-
-      // Lamppost (20% chance per building)
-      if (Math.random() < 0.2) {
-        var pole = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.03, 0.04, 2.5, 6),
-          createToonMaterial(0x444444)
-        );
-        pole.position.set(xBase - side * 1.5, 1.25, z + w / 2);
-        pole.userData.noOutline = true;
-        group.add(pole);
-        var lamp = new THREE.Mesh(
-          new THREE.SphereGeometry(0.1, 6, 4),
-          new THREE.MeshBasicMaterial({ color: 0xFFDD66 })
-        );
-        lamp.position.set(xBase - side * 1.5, 2.6, z + w / 2);
-        lamp.userData.noOutline = true;
-        group.add(lamp);
-      }
-
-      z += w + 0.15;
     }
 
     return group;
@@ -2982,6 +3014,7 @@
 
   // ===================== INIT =====================
   function init() {
+    preloadKenneyAssets();
     loadVehicle();
     initTrack();
     buildPlayer();
