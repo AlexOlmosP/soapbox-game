@@ -833,9 +833,8 @@
     rightSW.receiveShadow = true;
     group.add(rightSW);
 
-    // Building rows
-    group.add(createBuildingRow(-1, SEGMENT_LENGTH));
-    group.add(createBuildingRow(1, SEGMENT_LENGTH));
+    // Buildings are NOT in segment group — they're spawned separately in scene root
+    // so they stay vertical while the road tilts downhill
 
     return group;
   }
@@ -860,6 +859,7 @@
       seg.position.z = -i * SEGMENT_LENGTH;
       seg.position.y = 0;
       seg.visible = true;
+      spawnBuildingsForZ(-i * SEGMENT_LENGTH);
     }
   }
 
@@ -880,6 +880,7 @@
         segmentPool[i].position.z = newZ;
         segmentPool[i].position.y = 0;
         spawnSceneryForZ(newZ);
+        spawnBuildingsForZ(newZ);
       }
     }
   }
@@ -1875,6 +1876,34 @@
     }
   }
 
+  // ===================== BUILDING ROWS (scene root, vertical) =====================
+  var activeBuildingRows = [];
+
+  function spawnBuildingsForZ(z) {
+    var leftRow = createBuildingRow(-1, SEGMENT_LENGTH);
+    leftRow.position.z = z;
+    leftRow.position.y = z * DOWNHILL_SLOPE;
+    scene.add(leftRow);
+    activeBuildingRows.push(leftRow);
+
+    var rightRow = createBuildingRow(1, SEGMENT_LENGTH);
+    rightRow.position.z = z;
+    rightRow.position.y = z * DOWNHILL_SLOPE;
+    scene.add(rightRow);
+    activeBuildingRows.push(rightRow);
+  }
+
+  function updateBuildings(dt) {
+    for (var i = activeBuildingRows.length - 1; i >= 0; i--) {
+      activeBuildingRows[i].position.z += scrollSpeed * dt;
+      activeBuildingRows[i].position.y = activeBuildingRows[i].position.z * DOWNHILL_SLOPE;
+      if (activeBuildingRows[i].position.z > SEGMENT_LENGTH + 5) {
+        scene.remove(activeBuildingRows[i]);
+        activeBuildingRows.splice(i, 1);
+      }
+    }
+  }
+
   // ===================== NEAR-MISS DETECTION =====================
   function checkNearMisses() {
     var playerHalfW = PLAYER_HITBOX.x / 2;
@@ -2364,6 +2393,12 @@
     }
     activeScenery = [];
 
+    // Clear building rows
+    for (var i = 0; i < activeBuildingRows.length; i++) {
+      scene.remove(activeBuildingRows[i]);
+    }
+    activeBuildingRows = [];
+
     // Clear effects layer
     effectsLayer.innerHTML = '';
 
@@ -2470,6 +2505,12 @@
       activeScenery[i].visible = false;
     }
     activeScenery = [];
+
+    // Clear building rows
+    for (var i = 0; i < activeBuildingRows.length; i++) {
+      scene.remove(activeBuildingRows[i]);
+    }
+    activeBuildingRows = [];
 
     // Clear effects layer
     effectsLayer.innerHTML = '';
@@ -2865,6 +2906,7 @@
         spawnObstacles(dt);
         updateObstacles(dt);
         updateScenery(dt);
+        updateBuildings(dt);
         updateCollectibles(dt, time);
         checkCollisions();
         checkCollectibles();
