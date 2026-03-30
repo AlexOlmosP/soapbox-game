@@ -291,54 +291,47 @@
   </div>
 </div>
 
-<div id="screen-garage" style="position:absolute;top:0;left:0;right:0;bottom:0;display:none;z-index:40;pointer-events:auto;background:linear-gradient(180deg, rgba(11,22,40,0.85) 0%, rgba(11,22,40,0.6) 50%, rgba(11,22,40,0.85) 100%);">
-  <!-- Back button -->
-  <button onclick="quitToTitle()" style="position:absolute;top:16px;left:16px;z-index:2;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:rgba(255,255,255,0.8);font-family:var(--font-body);font-size:13px;padding:8px 16px;cursor:pointer;backdrop-filter:blur(8px);">&#8592; BACK</button>
+<div id="screen-garage" style="position:absolute;top:0;left:0;right:0;bottom:0;display:none;z-index:40;pointer-events:auto;">
 
-  <!-- Vehicle name -->
-  <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:2;">
-    <input id="garage-vehicle-name" type="text" value="My Soapbox" maxlength="20" oninput="garageSetName(this.value)" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,215,0,0.3);border-radius:10px;color:#FFD700;font-family:var(--font-display);font-size:22px;text-align:center;padding:6px 20px;outline:none;width:220px;text-shadow:0 0 12px rgba(255,215,0,0.3);">
-  </div>
-
-  <!-- Part picker panel (right side) -->
-  <div style="position:absolute;top:56px;right:12px;bottom:80px;width:250px;z-index:2;display:flex;flex-direction:column;gap:8px;overflow:hidden;background:rgba(11,22,40,0.7);border-radius:16px;padding:12px;border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(12px);">
-    <!-- Tabs -->
-    <div style="display:flex;flex-wrap:wrap;gap:4px;">
-      <button class="garage-tab" data-tab="chassis" onclick="garageSelectTab('chassis')" style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid #FFD700;background:rgba(255,215,0,0.15);color:#FFD700;font-family:var(--font-body);font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Chassis</button>
-      <button class="garage-tab" data-tab="wheels" onclick="garageSelectTab('wheels')" style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);font-family:var(--font-body);font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Wheels</button>
-      <button class="garage-tab" data-tab="top" onclick="garageSelectTab('top')" style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);font-family:var(--font-body);font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Top</button>
-      <button class="garage-tab" data-tab="side" onclick="garageSelectTab('side')" style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);font-family:var(--font-body);font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Front</button>
-      <button class="garage-tab" data-tab="front" onclick="garageSelectTab('front')" style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);font-family:var(--font-body);font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Back</button>
-      <button class="garage-tab" data-tab="back" onclick="garageSelectTab('back')" style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);font-family:var(--font-body);font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Side</button>
-      <button class="garage-tab" data-tab="helmet" onclick="garageSelectTab('helmet')" style="flex:1;min-width:60px;padding:7px 4px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.6);font-family:var(--font-body);font-size:11px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Helmet</button>
-    </div>
-    <!-- Part grid -->
-    <div id="garage-part-grid" style="display:flex;flex-wrap:wrap;gap:4px;overflow-y:auto;flex:1;align-content:flex-start;"></div>
-    <!-- Color picker -->
-    <div id="garage-color-picker" style="display:none;flex-direction:column;gap:8px;margin-top:4px;">
-      <div style="color:rgba(255,215,0,0.7);font-family:var(--font-body);font-size:10px;text-transform:uppercase;letter-spacing:2px;">Color</div>
-      <div id="garage-color-swatches" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+  <!-- Top bar: back + name -->
+  <div style="position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
+    <button onclick="quitToTitle()" style="background:rgba(0,0,0,0.3);border:none;border-radius:10px;color:white;font-family:var(--font-body);font-size:13px;font-weight:800;padding:8px 14px;cursor:pointer;backdrop-filter:blur(8px);">&#8592;</button>
+    <input id="garage-vehicle-name" type="text" value="My Soapbox" maxlength="20" oninput="garageSetName(this.value)" style="background:none;border:none;color:white;font-family:var(--font-display);font-size:24px;text-align:center;outline:none;text-shadow:2px 2px 0 rgba(0,0,0,0.4);width:200px;">
+    <!-- Stats inline -->
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div style="display:flex;align-items:center;gap:3px;"><span style="color:#FF3344;font-family:var(--font-body);font-size:10px;font-weight:800;">SPD</span><div id="garage-stat-spd" style="display:flex;"></div></div>
+      <div style="display:flex;align-items:center;gap:3px;"><span style="color:#4488FF;font-family:var(--font-body);font-size:10px;font-weight:800;">HDL</span><div id="garage-stat-hdl" style="display:flex;"></div></div>
+      <div style="display:flex;align-items:center;gap:3px;"><span style="color:#FFD700;font-family:var(--font-body);font-size:10px;font-weight:800;">STY</span><div id="garage-stat-sty" style="display:flex;"></div></div>
     </div>
   </div>
 
-  <!-- Stats bars (bottom-left) -->
-  <div style="position:absolute;bottom:16px;left:16px;z-index:2;background:rgba(11,22,40,0.7);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 18px;backdrop-filter:blur(12px);">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <span style="color:#FF3344;font-family:var(--font-body);font-size:12px;font-weight:800;width:32px;">SPD</span>
-      <div id="garage-stat-spd" style="display:flex;"></div>
+  <!-- 3D vehicle fills the upper area (canvas behind this div) -->
+
+  <!-- Bottom panel: parts + colors + RACE -->
+  <div style="position:absolute;bottom:0;left:0;right:0;z-index:3;background:linear-gradient(180deg, rgba(11,22,40,0) 0%, rgba(11,22,40,0.95) 15%, rgba(11,22,40,0.98) 100%);padding:16px 16px 12px 16px;">
+
+    <!-- Color picker (above grid when visible) -->
+    <div id="garage-color-picker" style="display:none;flex-direction:row;gap:6px;margin-bottom:10px;justify-content:center;flex-wrap:wrap;">
+      <div id="garage-color-swatches" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
     </div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <span style="color:#4488FF;font-family:var(--font-body);font-size:12px;font-weight:800;width:32px;">HDL</span>
-      <div id="garage-stat-hdl" style="display:flex;"></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <span style="color:#FFD700;font-family:var(--font-body);font-size:12px;font-weight:800;width:32px;">STY</span>
-      <div id="garage-stat-sty" style="display:flex;"></div>
+
+    <!-- Scrollable part grid -->
+    <div id="garage-part-grid" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
+
+    <!-- Category tabs + RACE button -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div style="display:flex;flex:1;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+        <button class="garage-tab" data-tab="chassis" onclick="garageSelectTab('chassis')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:white;font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Chassis</button>
+        <button class="garage-tab" data-tab="wheels" onclick="garageSelectTab('wheels')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Wheels</button>
+        <button class="garage-tab" data-tab="top" onclick="garageSelectTab('top')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Top</button>
+        <button class="garage-tab" data-tab="side" onclick="garageSelectTab('side')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Side</button>
+        <button class="garage-tab" data-tab="front" onclick="garageSelectTab('front')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Front</button>
+        <button class="garage-tab" data-tab="back" onclick="garageSelectTab('back')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Back</button>
+        <button class="garage-tab" data-tab="helmet" onclick="garageSelectTab('helmet')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Helmet</button>
+      </div>
+      <button class="game-btn pulse" onclick="startRaceFromGarage()" style="background:linear-gradient(180deg,#DB0A40 0%,#A80830 100%);border:none;box-shadow:0 3px 0 #8A0628;font-size:18px;padding:10px 28px;letter-spacing:2px;border-radius:10px;margin-left:8px;">RACE!</button>
     </div>
   </div>
-
-  <!-- RACE button (bottom-right) — Red Bull red -->
-  <button class="game-btn large pulse" onclick="startRaceFromGarage()" style="position:absolute;bottom:16px;right:16px;z-index:2;background:linear-gradient(180deg,#DB0A40 0%,#A80830 100%);border:none;box-shadow:0 4px 16px rgba(219,10,64,0.4),0 6px 0 #8A0628;font-size:28px;padding:16px 48px;letter-spacing:3px;">RACE!</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -2597,7 +2590,7 @@
         var current = vehicleData.decorations[garageActiveTab];
         selected = (item === 'none' && !current) || current === item;
       }
-      html += '<button onclick="garageSelectPart(\'' + item + '\')" style="padding:8px 12px;margin:4px;border-radius:8px;border:2px solid ' + (selected ? '#FFD700' : 'rgba(255,255,255,0.2)') + ';background:' + (selected ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.08)') + ';color:white;font-family:var(--font-body);font-size:13px;cursor:pointer;text-transform:capitalize;">' + item + '</button>';
+      html += '<button onclick="garageSelectPart(\'' + item + '\')" style="flex-shrink:0;padding:10px 18px;border-radius:12px;border:2px solid ' + (selected ? '#DB0A40' : 'rgba(255,255,255,0.1)') + ';background:' + (selected ? 'rgba(219,10,64,0.2)' : 'rgba(255,255,255,0.05)') + ';color:' + (selected ? 'white' : 'rgba(255,255,255,0.7)') + ';font-family:var(--font-body);font-size:14px;font-weight:800;cursor:pointer;text-transform:capitalize;white-space:nowrap;">' + item + '</button>';
     });
     grid.innerHTML = html;
 
@@ -2625,8 +2618,9 @@
     // Update tab highlights
     var tabs = document.querySelectorAll('.garage-tab');
     tabs.forEach(function(t) {
-      t.style.background = t.dataset.tab === tab ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.08)';
-      t.style.borderColor = t.dataset.tab === tab ? '#FFD700' : 'rgba(255,255,255,0.2)';
+      var active = t.dataset.tab === tab;
+      t.style.background = active ? '#DB0A40' : '#1A3060';
+      t.style.color = active ? 'white' : 'rgba(255,255,255,0.5)';
     });
     updateGaragePartGrid();
     updateGarageColorPicker();
