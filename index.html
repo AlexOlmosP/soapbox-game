@@ -842,7 +842,7 @@
 
   // Track group tilts the entire road as one piece — no stair steps
   var trackGroup = new THREE.Group();
-  trackGroup.rotation.x = -Math.atan(DOWNHILL_SLOPE); // tilt downhill
+  // No tilt — buildings stay vertical. Downhill feel comes from camera angle.
   scene.add(trackGroup);
 
   function initTrack() {
@@ -2158,11 +2158,11 @@
   function updateCamera() {
     var tx = playerX * 0.3;
     var bob = Math.sin(distance * 0.8) * 0.04;
-    // Higher camera, steeper downhill angle
-    var target = new THREE.Vector3(tx, 4.0 + bob, 4.5);
+    // High camera looking steeply down — creates downhill illusion via perspective
+    var target = new THREE.Vector3(tx, 5.5 + bob, 3.5);
     camera.position.lerp(target, 0.08);
-    // Look further down and ahead for dramatic downhill perspective
-    camera.lookAt(playerX * 0.2, -0.8, -10);
+    // Look far down and ahead — road vanishing point below screen center = downhill feel
+    camera.lookAt(playerX * 0.2, -2.0, -12);
   }
 
   // ===================== SPEED & SCORE =====================
@@ -2212,13 +2212,13 @@
       hudMultiplier.style.display = 'block';
       hudMultiplier.textContent = 'x' + styleMultiplier.toFixed(2);
       showCountdownNumber('3', false);
-      camera.position.set(3, 5, 8);
-      camera.fov = 45;
+      camera.position.set(3, 7, 6);
+      camera.fov = 50;
       camera.updateProjectionMatrix();
       hideVisualOverlays();
     } else if (newState === 'racing') {
       countdownOverlay.style.display = 'none';
-      camera.fov = 60;
+      camera.fov = 65;
       camera.updateProjectionMatrix();
       showRacingOverlays();
     } else if (newState === 'gameover') {
@@ -2247,14 +2247,14 @@
     var elapsed = now - countdownStartTime;
     var t = elapsed / 3500; // 3.5s total
 
-    // Camera lerp from (3,5,8) to (0,3,5.5)
-    var startCam = new THREE.Vector3(3, 5, 8);
-    var endCam = new THREE.Vector3(0, 3, 5.5);
-    var lerpT = Math.min(t / 1.0, 1.0); // complete in first ~3.5s
+    // Camera lerp from high establishing to racing position
+    var startCam = new THREE.Vector3(3, 7, 6);
+    var endCam = new THREE.Vector3(0, 5.5, 3.5);
+    var lerpT = Math.min(t / 1.0, 1.0);
     camera.position.lerpVectors(startCam, endCam, lerpT);
-    camera.lookAt(0, 0.5, -8);
-    // Phase 6: FOV zoom from 45 (wide establishing) to 60 (race view)
-    camera.fov = 45 + (60 - 45) * lerpT;
+    camera.lookAt(0, -1.0, -10);
+    // FOV zoom from wide establishing to race view
+    camera.fov = 50 + (65 - 50) * lerpT;
     camera.updateProjectionMatrix();
 
     // Show numbers
@@ -2373,7 +2373,7 @@
       segmentPool[i].visible = true;
     }
 
-    camera.fov = 60;
+    camera.fov = 65;
     camera.updateProjectionMatrix();
 
     setupRaceLighting();
@@ -2471,7 +2471,7 @@
       segmentPool[i].visible = true;
     }
 
-    camera.fov = 60;
+    camera.fov = 65;
     camera.updateProjectionMatrix();
     hideVisualOverlays();
 
@@ -2688,7 +2688,7 @@
     }
     activeScenery = [];
 
-    camera.fov = 60;
+    camera.fov = 65;
     camera.updateProjectionMatrix();
     transition('countdown');
   };
@@ -2879,9 +2879,9 @@
         updateBoostOverlay();
         // FOV shift during boost
         if (isBoosted) {
-          camera.fov = THREE.MathUtils.lerp(camera.fov, 72, 0.08);
+          camera.fov = THREE.MathUtils.lerp(camera.fov, 78, 0.08);
         } else {
-          camera.fov = THREE.MathUtils.lerp(camera.fov, 60, 0.04);
+          camera.fov = THREE.MathUtils.lerp(camera.fov, 65, 0.04);
         }
         camera.updateProjectionMatrix();
         // Forward lean for downhill feel
