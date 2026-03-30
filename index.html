@@ -1878,17 +1878,19 @@
 
   // ===================== BUILDING ROWS (scene root, vertical) =====================
   var activeBuildingRows = [];
+  // Exact slope factor matching trackGroup rotation for pixel-perfect alignment
+  var SLOPE_SIN = Math.sin(Math.atan(DOWNHILL_SLOPE));
 
   function spawnBuildingsForZ(z) {
     var leftRow = createBuildingRow(-1, SEGMENT_LENGTH);
     leftRow.position.z = z;
-    leftRow.position.y = z * DOWNHILL_SLOPE;
+    leftRow.position.y = z * SLOPE_SIN;
     scene.add(leftRow);
     activeBuildingRows.push(leftRow);
 
     var rightRow = createBuildingRow(1, SEGMENT_LENGTH);
     rightRow.position.z = z;
-    rightRow.position.y = z * DOWNHILL_SLOPE;
+    rightRow.position.y = z * SLOPE_SIN;
     scene.add(rightRow);
     activeBuildingRows.push(rightRow);
   }
@@ -1896,7 +1898,7 @@
   function updateBuildings(dt) {
     for (var i = activeBuildingRows.length - 1; i >= 0; i--) {
       activeBuildingRows[i].position.z += scrollSpeed * dt;
-      activeBuildingRows[i].position.y = activeBuildingRows[i].position.z * DOWNHILL_SLOPE;
+      activeBuildingRows[i].position.y = activeBuildingRows[i].position.z * SLOPE_SIN;
       if (activeBuildingRows[i].position.z > SEGMENT_LENGTH + 5) {
         scene.remove(activeBuildingRows[i]);
         activeBuildingRows.splice(i, 1);
@@ -2737,6 +2739,15 @@
       activeScenery[i].visible = false;
     }
     activeScenery = [];
+
+    // Clear and respawn buildings for all segments
+    for (var i = 0; i < activeBuildingRows.length; i++) {
+      scene.remove(activeBuildingRows[i]);
+    }
+    activeBuildingRows = [];
+    for (var i = 0; i < segmentPool.length; i++) {
+      spawnBuildingsForZ(segmentPool[i].position.z);
+    }
 
     camera.fov = 65;
     camera.updateProjectionMatrix();
