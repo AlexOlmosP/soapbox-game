@@ -784,8 +784,10 @@
         // Re-measure after scale
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        // Position: flush against road side
-        model.position.set(xBase + side * size.x / 2, -box.min.y, z + size.z / 2);
+        // Position: flush against road side, adjust Y per local Z for slope
+        var localZ = z + size.z / 2;
+        var localSlopeY = localZ * SLOPE_SIN; // lower buildings further ahead
+        model.position.set(xBase + side * size.x / 2, -box.min.y + localSlopeY, localZ);
         // Face the road: left buildings face right (+X), right buildings face left (-X)
         model.rotation.y = (side < 0) ? -Math.PI / 2 : Math.PI / 2;
         model.userData.noOutline = true;
@@ -798,7 +800,8 @@
         var d = 2.5 + Math.random() * 1.5;
         var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
         var bld = createProceduralBuilding(w, h, d, color);
-        bld.position.set(xBase + side * d / 2, 0, z + w / 2);
+        var localZ2 = z + w / 2;
+        bld.position.set(xBase + side * d / 2, localZ2 * SLOPE_SIN, localZ2);
         group.add(bld);
         z += w + 0.15;
       }
@@ -1925,21 +1928,27 @@
   function spawnBuildingsForZ(z) {
     var leftRow = createBuildingRow(-1, SEGMENT_LENGTH);
     leftRow.position.z = z;
-    leftRow.position.y = z * SLOPE_SIN;
+    leftRow.position.y = 0; // Individual buildings handle their own slope Y
     scene.add(leftRow);
     activeBuildingRows.push(leftRow);
 
     var rightRow = createBuildingRow(1, SEGMENT_LENGTH);
     rightRow.position.z = z;
-    rightRow.position.y = z * SLOPE_SIN;
+    rightRow.position.y = 0;
     scene.add(rightRow);
     activeBuildingRows.push(rightRow);
   }
 
   function updateBuildings(dt) {
     for (var i = activeBuildingRows.length - 1; i >= 0; i--) {
-      activeBuildingRows[i].position.z += scrollSpeed * dt;
-      activeBuildingRows[i].position.y = activeBuildingRows[i].position.z * SLOPE_SIN;
+      var row = activeBuildingRows[i];
+      var prevZ = row.position.z;
+      row.position.z += scrollSpeed * dt;
+      // Shift each child building's Y to follow slope as group scrolls
+      var dz = row.position.z - prevZ;
+      for (var c = 0; c < row.children.length; c++) {
+        row.children[c].position.y += dz * SLOPE_SIN;
+      }
       if (activeBuildingRows[i].position.z > SEGMENT_LENGTH + 5) {
         scene.remove(activeBuildingRows[i]);
         activeBuildingRows.splice(i, 1);
