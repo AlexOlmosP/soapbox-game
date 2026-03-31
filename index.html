@@ -764,12 +764,15 @@
     return group;
   }
 
+  // How far below ground buildings extend (hides slope gaps)
+  var BUILDING_FOUNDATION = segLen * DOWNHILL_SLOPE + 2;
+
   function createBuildingRow(side, segLen) {
     var group = new THREE.Group();
-    var xBase = side * (ROAD_WIDTH / 2 + 2.0); // Flush with sidewalk outer edge
+    var xBase = side * (ROAD_WIDTH / 2 + 2.0);
     var z = -segLen / 2;
 
-    while (z < segLen / 2) { // Fill ENTIRE segment, no margin
+    while (z < segLen / 2) {
       var model = getKenneyBuilding();
 
       if (model) {
@@ -780,20 +783,22 @@
         model.scale.setScalar(scale);
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        model.position.set(xBase + side * size.x / 2, -box.min.y, z + size.z / 2);
+        // Sink building below ground so base is never visible above road
+        model.position.set(xBase + side * size.x / 2, -box.min.y - BUILDING_FOUNDATION, z + size.z / 2);
         model.rotation.y = (side < 0) ? -Math.PI / 2 : Math.PI / 2;
         model.userData.noOutline = true;
         group.add(model);
-        z += size.z; // NO gap — flush tiling
+        z += size.z;
       } else {
         var w = 2.0 + Math.random() * 2.0;
-        var h = 3 + Math.random() * 5;
+        var h = 3 + Math.random() * 5 + BUILDING_FOUNDATION;
         var d = 2.5 + Math.random() * 1.5;
         var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
         var bld = createProceduralBuilding(w, h, d, color);
-        bld.position.set(xBase + side * d / 2, 0, z + w / 2);
+        // Position so top of foundation is at ground, rest extends below
+        bld.position.set(xBase + side * d / 2, -BUILDING_FOUNDATION, z + w / 2);
         group.add(bld);
-        z += w; // NO gap — flush tiling
+        z += w;
       }
     }
 
