@@ -778,12 +778,14 @@
       if (model) {
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
-        var targetH = 3 + Math.random() * 4;
-        var scale = targetH / Math.max(size.y, 0.1);
+        // Scale so visible height above ground is 3-7m (add foundation below)
+        var visibleH = 3 + Math.random() * 4;
+        var totalH = visibleH + BUILDING_FOUNDATION;
+        var scale = totalH / Math.max(size.y, 0.1);
         model.scale.setScalar(scale);
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        // Sink building below ground so base is never visible above road
+        // Sink by foundation amount — visible part stays above ground
         model.position.set(xBase + side * size.x / 2, -box.min.y - BUILDING_FOUNDATION, z + size.z / 2);
         model.rotation.y = (side < 0) ? -Math.PI / 2 : Math.PI / 2;
         model.userData.noOutline = true;
