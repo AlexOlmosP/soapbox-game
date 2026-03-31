@@ -765,7 +765,7 @@
   }
 
   // How far below ground buildings extend (hides slope gaps)
-  var BUILDING_FOUNDATION = segLen * DOWNHILL_SLOPE + 2;
+  var BUILDING_FOUNDATION = SEGMENT_LENGTH * DOWNHILL_SLOPE + 2;
 
   function createBuildingRow(side, segLen) {
     var group = new THREE.Group();
