@@ -766,55 +766,34 @@
 
   function createBuildingRow(side, segLen) {
     var group = new THREE.Group();
-    var xBase = side * (ROAD_WIDTH / 2 + 1.5);
+    var xBase = side * (ROAD_WIDTH / 2 + 2.0); // Flush with sidewalk outer edge
     var z = -segLen / 2;
 
-    while (z < segLen / 2 - 0.5) {
-      var spacing = 2.0 + Math.random() * 1.5;
+    while (z < segLen / 2) { // Fill ENTIRE segment, no margin
       var model = getKenneyBuilding();
 
       if (model) {
-        // Measure and scale Kenney model
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
-        // Scale to fit: height 3-7m, width ~2-3m along street
         var targetH = 3 + Math.random() * 4;
         var scale = targetH / Math.max(size.y, 0.1);
         model.scale.setScalar(scale);
-        // Re-measure after scale
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        // Position: flush against road side, base on ground
         model.position.set(xBase + side * size.x / 2, -box.min.y, z + size.z / 2);
-        // Face the road: left buildings face right (+X), right buildings face left (-X)
         model.rotation.y = (side < 0) ? -Math.PI / 2 : Math.PI / 2;
         model.userData.noOutline = true;
         group.add(model);
-        z += size.z + 0.1;
+        z += size.z; // NO gap — flush tiling
       } else {
-        // Fallback: procedural box building
-        var w = 1.8 + Math.random() * 2.5;
+        var w = 2.0 + Math.random() * 2.0;
         var h = 3 + Math.random() * 5;
         var d = 2.5 + Math.random() * 1.5;
         var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
         var bld = createProceduralBuilding(w, h, d, color);
         bld.position.set(xBase + side * d / 2, 0, z + w / 2);
         group.add(bld);
-        z += w + 0.15;
-      }
-
-      // Tree between buildings (30% chance)
-      if (Math.random() < 0.3) {
-        var tree = getKenneyTree();
-        if (tree) {
-          var treeBox = new THREE.Box3().setFromObject(tree);
-          var treeSize = treeBox.getSize(new THREE.Vector3());
-          var treeScale = (1.5 + Math.random()) / Math.max(treeSize.y, 0.1);
-          tree.scale.setScalar(treeScale);
-          tree.position.set(xBase - side * 0.8, 0, z);
-          tree.userData.noOutline = true;
-          group.add(tree);
-        }
+        z += w; // NO gap — flush tiling
       }
     }
 
