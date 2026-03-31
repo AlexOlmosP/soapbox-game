@@ -2473,9 +2473,10 @@
     document.getElementById('screen-garage').style.display = 'none';
     gameoverOverlay.style.display = 'none';
 
-    // Show track segments
+    // Show track segments + respawn buildings
     for (var i = 0; i < segmentPool.length; i++) {
       segmentPool[i].visible = true;
+      spawnBuildingsForZ(segmentPool[i].position.z);
     }
 
     camera.fov = 65;
