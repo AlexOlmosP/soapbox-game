@@ -786,8 +786,8 @@
         size = box.getSize(new THREE.Vector3());
         // Position: flush against road side
         model.position.set(xBase + side * size.x / 2, -box.min.y, z + size.z / 2);
-        // Face the road
-        if (side > 0) model.rotation.y = Math.PI;
+        // Face the road: left buildings face right (+X), right buildings face left (-X)
+        model.rotation.y = (side < 0) ? -Math.PI / 2 : Math.PI / 2;
         model.userData.noOutline = true;
         group.add(model);
         z += size.z + 0.1;
