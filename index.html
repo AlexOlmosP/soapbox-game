@@ -723,11 +723,19 @@
         loaded++;
         if (loaded === toLoad.length) kenneyModelsLoaded = true;
       }, undefined, function() {
-        // Failed — will fall back to procedural
         loaded++;
         if (loaded === toLoad.length) kenneyModelsLoaded = true;
       });
     });
+    // Also preload obstacle GLBs into glbCache
+    if (GLB_ASSETS.obstacles) {
+      Object.keys(GLB_ASSETS.obstacles).forEach(function(type) {
+        var asset = GLB_ASSETS.obstacles[type];
+        loader.load(asset.file, function(gltf) {
+          glbCache[asset.file] = gltf.scene;
+        }, undefined, function() {});
+      });
+    }
   }
 
   function getKenneyBuilding() {
@@ -982,6 +990,9 @@
       rocket:  { file: 'Meshy_AI_Red_Stripe_Rocket_0330160432_texture.glb', rotY: Math.PI },
       couch:   { file: 'Meshy_AI_couch_car_0330162428_texture.glb', rotY: Math.PI },
       shoe:    { file: 'Meshy_AI_shoe_car_0330163356_texture.glb', rotY: Math.PI }
+    },
+    obstacles: {
+      barrel: { file: 'Meshy_AI_barrel_0331141338_texture.glb', rotY: 0 }
     }
   };
   var glbCache = {};
@@ -2066,7 +2077,22 @@
             mainMesh = c;
           }
         });
-        if (mainMesh) {
+        // Try GLB model for this obstacle type
+        var obsGlb = GLB_ASSETS.obstacles && GLB_ASSETS.obstacles[type];
+        var glbCached = obsGlb && glbCache[obsGlb.file];
+        if (glbCached) {
+          // Clear old children and use GLB clone
+          while (obs.children.length) obs.remove(obs.children[0]);
+          var clone = glbCached.clone();
+          var obox = new THREE.Box3().setFromObject(clone);
+          var osize = obox.getSize(new THREE.Vector3());
+          var obsScale = hb.y / Math.max(osize.y, 0.01);
+          clone.scale.setScalar(obsScale);
+          obox.setFromObject(clone);
+          clone.position.y = -obox.min.y;
+          if (obsGlb.rotY) clone.rotation.y = obsGlb.rotY;
+          obs.add(clone);
+        } else if (mainMesh) {
           mainMesh.geometry.dispose();
           mainMesh.geometry = new THREE.BoxGeometry(hb.x, hb.y, hb.z);
           mainMesh.material = createToonMaterial(OBSTACLE_COLORS[type]);
@@ -2074,8 +2100,8 @@
           mainMesh.rotation.set(0, 0, 0);
           mainMesh.scale.set(1, 1, 1);
         }
-        // Reset all children rotations (outlines etc)
-        obs.traverse(function(c) { c.rotation.set(0, 0, 0); });
+        // Reset group rotation
+        obs.rotation.set(0, 0, 0);
         obs.userData.type = type;
         obs.userData.hitbox = hb;
         obs.userData.nearMissCounted = false;
