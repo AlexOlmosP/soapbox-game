@@ -1503,6 +1503,71 @@
     setTimeout(function() { banner.remove(); }, 2100);
   }
 
+  // ===================== SPEED ZONES =====================
+  var activeSpeedStrips = [];
+  var lastSpeedZoneDist = 0;
+  var speedZoneActive = false;
+  var speedZoneEndTime = 0;
+
+  function createSpeedStrip() {
+    var geo = new THREE.PlaneGeometry(ROAD_WIDTH - 0.5, 3);
+    geo.rotateX(-Math.PI / 2);
+    var mat = new THREE.MeshBasicMaterial({
+      color: 0x00FF88, transparent: true, opacity: 0.35, depthWrite: false
+    });
+    var strip = new THREE.Mesh(geo, mat);
+    strip.position.y = 0.05;
+    strip.userData.noOutline = true;
+
+    // Arrow chevrons on the strip
+    for (var ci = -1; ci <= 1; ci++) {
+      var arrow = new THREE.Mesh(
+        new THREE.ConeGeometry(0.3, 0.6, 3),
+        new THREE.MeshBasicMaterial({ color: 0x44FFAA, transparent: true, opacity: 0.5 })
+      );
+      arrow.rotation.x = -Math.PI / 2;
+      arrow.position.set(ci * 1.2, 0.08, 0);
+      arrow.userData.noOutline = true;
+      strip.add(arrow);
+    }
+
+    return strip;
+  }
+
+  function checkSpeedZones() {
+    // Spawn boost zone every 300-500m after first 200m
+    if (distance > 200 && distance > lastSpeedZoneDist + 300 + Math.random() * 200) {
+      lastSpeedZoneDist = distance;
+      var strip = createSpeedStrip();
+      strip.position.z = -SPAWN_DISTANCE;
+      trackGroup.add(strip);
+      activeSpeedStrips.push(strip);
+    }
+  }
+
+  function updateSpeedZones(dt, now) {
+    // Move strips with the scroll
+    for (var i = activeSpeedStrips.length - 1; i >= 0; i--) {
+      activeSpeedStrips[i].position.z += scrollSpeed * dt;
+      // Player passes through strip (z near 0)
+      if (!activeSpeedStrips[i].userData.triggered && activeSpeedStrips[i].position.z > -1 && activeSpeedStrips[i].position.z < 2) {
+        activeSpeedStrips[i].userData.triggered = true;
+        speedZoneActive = true;
+        speedZoneEndTime = now + 3000; // 3 second boost
+        showFloatingText('SPEED BOOST!', new THREE.Vector3(playerX, 2, 0), '#00FFAA');
+      }
+      // Recycle
+      if (activeSpeedStrips[i].position.z > 15) {
+        trackGroup.remove(activeSpeedStrips[i]);
+        activeSpeedStrips.splice(i, 1);
+      }
+    }
+    // Apply/expire boost
+    if (speedZoneActive && now > speedZoneEndTime) {
+      speedZoneActive = false;
+    }
+  }
+
   // ===================== RAMP JUMP =====================
   function handleRampHit() {
     isJumping = true;
@@ -2252,11 +2317,25 @@
   function updateCamera() {
     var tx = playerX * 0.3;
     var bob = Math.sin(distance * 0.8) * 0.04;
-    // Chase cam — high enough to see the road descending ahead
-    var target = new THREE.Vector3(tx, 4.2 + bob, 4.5);
+
+    // Visual curves — purely cosmetic, no gameplay change
+    var curveAmount = Math.sin(distance * 0.006) * 1.8;
+    var curveX = curveAmount * 0.15;
+    var curveLookX = curveAmount * 0.25;
+
+    // Elevation changes — hills and dips
+    var hillY = Math.sin(distance * 0.004) * 1.0;
+    var hillCamY = hillY * 0.25;
+    var hillLookY = hillY * 0.4;
+
+    // Chase cam with curves and elevation
+    var target = new THREE.Vector3(tx + curveX, 4.2 + bob + hillCamY, 4.5);
     camera.position.lerp(target, 0.08);
-    // Look down at road to show the descent
-    camera.lookAt(playerX * 0.2, -0.5, -10);
+    camera.lookAt(playerX * 0.2 + curveLookX, -0.5 + hillLookY, -10);
+
+    // Vehicle leans into curves + tilts over hills
+    vehicleGroup.rotation.z = -curveAmount * 0.02;
+    vehicleGroup.rotation.x = -0.05 + Math.cos(distance * 0.004) * 0.025;
   }
 
   // ===================== SPEED & SCORE =====================
@@ -2269,6 +2348,10 @@
       } else {
         targetSpeed *= BOOST_MULTIPLIER;
       }
+    }
+    // Speed zone boost
+    if (speedZoneActive) {
+      targetSpeed *= 1.4;
     }
     var accelRate = difficultyManager.isRestPhase() ? 0.3 : 0.8;
     if (scrollSpeed < targetSpeed) {
@@ -2421,6 +2504,11 @@
     difficultyManager.reset();
     isJumping = false;
     eventManager.reset();
+    // Reset speed zones
+    for (var szi = 0; szi < activeSpeedStrips.length; szi++) trackGroup.remove(activeSpeedStrips[szi]);
+    activeSpeedStrips = [];
+    lastSpeedZoneDist = 0;
+    speedZoneActive = false;
     currentZone = null;
     frameCounter = 0;
     lastSpawnedTypes = [];
@@ -2535,6 +2623,11 @@
     difficultyManager.reset();
     isJumping = false;
     eventManager.reset();
+    // Reset speed zones
+    for (var szi = 0; szi < activeSpeedStrips.length; szi++) trackGroup.remove(activeSpeedStrips[szi]);
+    activeSpeedStrips = [];
+    lastSpeedZoneDist = 0;
+    speedZoneActive = false;
     currentZone = null;
     frameCounter = 0;
     lastSpawnedTypes = [];
@@ -2806,6 +2899,11 @@
     difficultyManager.reset();
     isJumping = false;
     eventManager.reset();
+    // Reset speed zones
+    for (var szi = 0; szi < activeSpeedStrips.length; szi++) trackGroup.remove(activeSpeedStrips[szi]);
+    activeSpeedStrips = [];
+    lastSpeedZoneDist = 0;
+    speedZoneActive = false;
     currentZone = null;
     frameCounter = 0;
     lastSpawnedTypes = [];
@@ -3004,6 +3102,8 @@
         updateHUD();
         updateHUDSpeed();
         checkMilestones();
+        checkSpeedZones();
+        updateSpeedZones(dt, time);
         // Environment zone update every 30 frames
         frameCounter++;
         if (frameCounter % 30 === 0) {
