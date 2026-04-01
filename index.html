@@ -998,12 +998,21 @@
     });
   }
 
-  function toonifyModel(model, color) {
+  function toonifyModel(model, color, preserveTextures) {
     model.traverse(function(child) {
       if (child.isMesh && child.material) {
-        var origColor = color ? new THREE.Color(color) :
-          (child.material.color ? child.material.color.clone() : new THREE.Color(0xcccccc));
-        child.material = createToonMaterial(origColor);
+        if (preserveTextures) {
+          // Keep original per-mesh colors and texture maps — just add toon shading
+          var origColor = child.material.color ? child.material.color.clone() : new THREE.Color(0xcccccc);
+          var origMap = child.material.map || null;
+          var toonMat = createToonMaterial(origColor);
+          if (origMap) toonMat.map = origMap;
+          child.material = toonMat;
+        } else {
+          var c = color ? new THREE.Color(color) :
+            (child.material.color ? child.material.color.clone() : new THREE.Color(0xcccccc));
+          child.material = createToonMaterial(c);
+        }
         child.castShadow = true;
         child.receiveShadow = true;
       }
@@ -1026,7 +1035,7 @@
       var glbFile = glbAsset.file || glbAsset;
       var extraRotY = glbAsset.rotY || 0;
       loadGLB(glbFile).then(function(model) {
-        toonifyModel(model, vehicleData.chassis.color);
+        toonifyModel(model, null, true); // preserve original multi-color textures
         // Measure raw model size
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
@@ -2646,7 +2655,8 @@
     // Color picker visibility
     var colorPicker = document.getElementById('garage-color-picker');
     if (colorPicker) {
-      colorPicker.style.display = (garageActiveTab === 'chassis' || garageActiveTab === 'helmet') ? 'flex' : 'none';
+      var isGlbChassis = garageActiveTab === 'chassis' && GLB_ASSETS.chassis && GLB_ASSETS.chassis[vehicleData.chassis.type];
+      colorPicker.style.display = ((garageActiveTab === 'chassis' && !isGlbChassis) || garageActiveTab === 'helmet') ? 'flex' : 'none';
     }
   }
 
