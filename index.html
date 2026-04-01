@@ -2316,26 +2316,22 @@
   // ===================== CAMERA =====================
   function updateCamera() {
     var tx = playerX * 0.3;
-    var bob = Math.sin(distance * 0.8) * 0.04;
 
-    // Visual curves — purely cosmetic, no gameplay change
-    var curveAmount = Math.sin(distance * 0.006) * 1.8;
-    var curveX = curveAmount * 0.15;
-    var curveLookX = curveAmount * 0.25;
+    // Very subtle visual curves — only affects lookAt, not camera position
+    var curveAmount = Math.sin(distance * 0.004) * 0.8;
 
-    // Elevation changes — hills and dips
-    var hillY = Math.sin(distance * 0.004) * 1.0;
-    var hillCamY = hillY * 0.25;
-    var hillLookY = hillY * 0.4;
+    // Very subtle elevation — only affects lookAt Y
+    var hillY = Math.sin(distance * 0.003) * 0.5;
 
-    // Chase cam with curves and elevation
-    var target = new THREE.Vector3(tx + curveX, 4.2 + bob + hillCamY, 4.5);
+    // Stable chase cam — position does NOT sway (prevents perceived obstacle movement)
+    var target = new THREE.Vector3(tx, 4.2, 4.5);
     camera.position.lerp(target, 0.08);
-    camera.lookAt(playerX * 0.2 + curveLookX, -0.5 + hillLookY, -10);
+    // Only the lookAt shifts subtly for curve/hill feel
+    camera.lookAt(playerX * 0.2 + curveAmount * 0.1, -0.5 + hillY * 0.15, -10);
 
-    // Vehicle leans into curves + tilts over hills
-    vehicleGroup.rotation.z = -curveAmount * 0.02;
-    vehicleGroup.rotation.x = -0.05 + Math.cos(distance * 0.004) * 0.025;
+    // Subtle vehicle lean only
+    vehicleGroup.rotation.z = -curveAmount * 0.015;
+    vehicleGroup.rotation.x = -0.05;
   }
 
   // ===================== SPEED & SCORE =====================
