@@ -792,8 +792,8 @@
         model.scale.setScalar(scale);
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        // Raise building above max slope drop so it's never cropped
-        var liftY = SEGMENT_SLOPE_DROP;
+        // Building base at street level (y=0)
+        var liftY = 0;
         model.position.set(xBase + side * size.x / 2, -box.min.y + liftY, z + size.z / 2);
         // Fix PBR materials
         model.traverse(function(child) {
@@ -806,14 +806,13 @@
         });
         model.userData.noOutline = true;
         group.add(model);
-        // Retaining wall: fills gap from street (y=0) up to building base (y=liftY)
-        if (liftY > 0.1) {
-          var wallGeo = new THREE.BoxGeometry(size.x, liftY, size.z);
-          var wall = new THREE.Mesh(wallGeo, RETAINING_WALL_MAT);
-          wall.position.set(xBase + side * size.x / 2, liftY / 2, z + size.z / 2);
-          wall.userData.noOutline = true;
-          group.add(wall);
-        }
+        // Retaining wall: extends BELOW street level to cover slope gaps
+        var wallH = SEGMENT_SLOPE_DROP + 1;
+        var wallGeo = new THREE.BoxGeometry(size.x, wallH, size.z);
+        var wall = new THREE.Mesh(wallGeo, RETAINING_WALL_MAT);
+        wall.position.set(xBase + side * size.x / 2, -wallH / 2, z + size.z / 2);
+        wall.userData.noOutline = true;
+        group.add(wall);
         z += size.z;
       } else {
         var w = 2.0 + Math.random() * 2.0;
@@ -821,13 +820,14 @@
         var d = 2.5 + Math.random() * 1.5;
         var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
         var bld = createProceduralBuilding(w, h, d, color);
-        bld.position.set(xBase + side * d / 2, SEGMENT_SLOPE_DROP, z + w / 2);
-        // Retaining wall for procedural building
+        bld.position.set(xBase + side * d / 2, 0, z + w / 2);
+        // Retaining wall extends below street for procedural building
+        var pWallH = SEGMENT_SLOPE_DROP + 1;
         var pWall = new THREE.Mesh(
-          new THREE.BoxGeometry(d, SEGMENT_SLOPE_DROP, w),
+          new THREE.BoxGeometry(d, pWallH, w),
           RETAINING_WALL_MAT
         );
-        pWall.position.set(xBase + side * d / 2, SEGMENT_SLOPE_DROP / 2, z + w / 2);
+        pWall.position.set(xBase + side * d / 2, -pWallH / 2, z + w / 2);
         pWall.userData.noOutline = true;
         group.add(pWall);
         group.add(bld);
