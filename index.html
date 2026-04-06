@@ -1744,18 +1744,10 @@
           // Spawn ramps in all 3 lanes — player must jump
           for (var rl = 0; rl < 3; rl++) {
             var obs = obstaclePool.get();
-            var mainMesh = null;
-            obs.traverse(function(c) { if (c.isMesh && !c.userData.isOutline) mainMesh = c; });
-            if (mainMesh) {
-              mainMesh.geometry.dispose();
-              mainMesh.geometry = new THREE.BoxGeometry(1.4, 0.5, 1.2);
-              mainMesh.material = createToonMaterial(0x44DD66);
-              mainMesh.position.set(0, 0.15, 0);
-              mainMesh.rotation.set(0.3, 0, 0);
-              mainMesh.scale.set(1, 1, 1);
-            }
+            var rampHb = OBSTACLE_HITBOXES.ramp || new THREE.Vector3(1.4, 0.5, 1.2);
+            applyObstacleModel(obs, 'ramp', rampHb);
             obs.userData.type = 'ramp';
-            obs.userData.hitbox = new THREE.Vector3(1.4, 0.5, 1.2);
+            obs.userData.hitbox = rampHb;
             obs.userData.nearMissCounted = false;
             obs.position.set(LANES[rl], 0, -SPAWN_DISTANCE);
             obs.visible = true;
@@ -1782,18 +1774,10 @@
           continue;
         } else if (row.rampLane !== undefined) {
           var obs = obstaclePool.get();
-          var mainMesh = null;
-          obs.traverse(function(c) { if (c.isMesh && !c.userData.isOutline) mainMesh = c; });
-          if (mainMesh) {
-            mainMesh.geometry.dispose();
-            mainMesh.geometry = new THREE.BoxGeometry(1.4, 0.5, 1.2);
-            mainMesh.material = createToonMaterial(0x44DD66);
-            mainMesh.position.set(0, 0.15, 0);
-            mainMesh.rotation.set(0.3, 0, 0);
-            mainMesh.scale.set(1, 1, 1);
-          }
+          var rampHb2 = OBSTACLE_HITBOXES.ramp || new THREE.Vector3(1.4, 0.5, 1.2);
+          applyObstacleModel(obs, 'ramp', rampHb2);
           obs.userData.type = 'ramp';
-          obs.userData.hitbox = new THREE.Vector3(1.4, 0.5, 1.2);
+          obs.userData.hitbox = rampHb2;
           obs.userData.nearMissCounted = false;
           obs.position.set(LANES[row.rampLane], 0, -SPAWN_DISTANCE);
           obs.rotation.set(0, 0, 0);
@@ -1829,17 +1813,8 @@
               var obs = obstaclePool.get();
               var type = row.type || 'cone';
               var hb = OBSTACLE_HITBOXES[type] || OBSTACLE_HITBOXES.barrel;
-              var mainMesh = null;
-              obs.traverse(function(c) { if (c.isMesh && !c.userData.isOutline) mainMesh = c; });
-              if (mainMesh) {
-                mainMesh.geometry.dispose();
-                mainMesh.geometry = new THREE.BoxGeometry(hb.x, hb.y, hb.z);
-                mainMesh.material = createToonMaterial(OBSTACLE_COLORS[type] || 0xFF6633);
-                mainMesh.position.set(0, hb.y / 2, 0);
-                mainMesh.rotation.set(0, 0, 0);
-                mainMesh.scale.set(1, 1, 1);
-              }
-              obs.traverse(function(c) { c.rotation.set(0, 0, 0); });
+              applyObstacleModel(obs, type, hb);
+              obs.rotation.set(0, 0, 0);
               obs.userData.type = type;
               obs.userData.hitbox = hb;
               obs.userData.nearMissCounted = false;
@@ -2094,6 +2069,36 @@
 
   var lastSpawnedPattern = [false, false, false];
 
+  // Shared helper: apply GLB model or fallback box to an obstacle
+  function applyObstacleModel(obs, type, hb) {
+    var obsGlb = GLB_ASSETS.obstacles && GLB_ASSETS.obstacles[type];
+    var glbCached = obsGlb && glbCache[obsGlb.file];
+    if (glbCached) {
+      while (obs.children.length) obs.remove(obs.children[0]);
+      var clone = glbCached.clone();
+      var obox = new THREE.Box3().setFromObject(clone);
+      var osize = obox.getSize(new THREE.Vector3());
+      var obsScale = hb.y / Math.max(osize.y, 0.01);
+      clone.scale.setScalar(obsScale);
+      obox.setFromObject(clone);
+      clone.position.y = -obox.min.y;
+      if (obsGlb.rotY) clone.rotation.y = obsGlb.rotY;
+      obs.add(clone);
+    } else {
+      // Fallback: find existing mesh and swap geometry
+      var mainMesh = null;
+      obs.traverse(function(c) { if (c.isMesh && !c.userData.isOutline) mainMesh = c; });
+      if (mainMesh) {
+        mainMesh.geometry.dispose();
+        mainMesh.geometry = new THREE.BoxGeometry(hb.x, hb.y, hb.z);
+        mainMesh.material = createToonMaterial(OBSTACLE_COLORS[type] || 0xFF6633);
+        mainMesh.position.set(0, hb.y / 2, 0);
+        mainMesh.rotation.set(0, 0, 0);
+        mainMesh.scale.set(1, 1, 1);
+      }
+    }
+  }
+
   function spawnObstacleRow(pattern, z) {
     pattern = pattern.slice(); // always work on a copy
 
@@ -2149,35 +2154,7 @@
         var obs = obstaclePool.get();
         var type = pickObstacleType();
         var hb = OBSTACLE_HITBOXES[type];
-        var mainMesh = null;
-        obs.traverse(function(c) {
-          if (c.isMesh && !c.userData.isOutline) {
-            mainMesh = c;
-          }
-        });
-        // Try GLB model for this obstacle type
-        var obsGlb = GLB_ASSETS.obstacles && GLB_ASSETS.obstacles[type];
-        var glbCached = obsGlb && glbCache[obsGlb.file];
-        if (glbCached) {
-          // Clear old children and use GLB clone
-          while (obs.children.length) obs.remove(obs.children[0]);
-          var clone = glbCached.clone();
-          var obox = new THREE.Box3().setFromObject(clone);
-          var osize = obox.getSize(new THREE.Vector3());
-          var obsScale = hb.y / Math.max(osize.y, 0.01);
-          clone.scale.setScalar(obsScale);
-          obox.setFromObject(clone);
-          clone.position.y = -obox.min.y;
-          if (obsGlb.rotY) clone.rotation.y = obsGlb.rotY;
-          obs.add(clone);
-        } else if (mainMesh) {
-          mainMesh.geometry.dispose();
-          mainMesh.geometry = new THREE.BoxGeometry(hb.x, hb.y, hb.z);
-          mainMesh.material = createToonMaterial(OBSTACLE_COLORS[type]);
-          mainMesh.position.set(0, hb.y / 2, 0);
-          mainMesh.rotation.set(0, 0, 0);
-          mainMesh.scale.set(1, 1, 1);
-        }
+        applyObstacleModel(obs, type, hb);
         // Reset group rotation
         obs.rotation.set(0, 0, 0);
         obs.userData.type = type;
