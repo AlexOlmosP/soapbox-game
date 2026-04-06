@@ -770,6 +770,10 @@
   // How far below ground buildings extend (hides slope gaps)
   var BUILDING_FOUNDATION = SEGMENT_LENGTH * DOWNHILL_SLOPE + 2;
 
+  // Max slope drop across one segment — buildings raised by this amount
+  var SEGMENT_SLOPE_DROP = SEGMENT_LENGTH * Math.sin(Math.atan(DOWNHILL_SLOPE));
+  var RETAINING_WALL_MAT = createToonMaterial(0x777788);
+
   function createBuildingRow(side, segLen) {
     var group = new THREE.Group();
     var xBase = side * (ROAD_WIDTH / 2 + 2.0);
@@ -780,34 +784,36 @@
 
       if (buildingData) {
         var model = buildingData.model;
-        // Apply per-model front rotation + side flip
-        // frontRotY orients the front face, then add side-specific rotation
         model.rotation.y = buildingData.frontRotY + ((side < 0) ? Math.PI / 2 : -Math.PI / 2);
-        // Measure in final orientation
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
-        // Scale building to desired height (rises above street)
         var targetH = 4 + Math.random() * 5;
         var scale = targetH / Math.max(size.y, 0.1);
         model.scale.setScalar(scale);
-        // Re-measure after scale
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        // Building base at street level (y=0), extends upward
-        model.position.set(xBase + side * size.x / 2, -box.min.y, z + size.z / 2);
-        // Fix PBR materials: boost lighting so textures are visible
+        // Raise building above max slope drop so it's never cropped
+        var liftY = SEGMENT_SLOPE_DROP;
+        model.position.set(xBase + side * size.x / 2, -box.min.y + liftY, z + size.z / 2);
+        // Fix PBR materials
         model.traverse(function(child) {
           if (child.isMesh && child.material) {
             var mat = child.material;
-            // Keep original material but reduce metalness/roughness that cause darkness
             if (mat.metalness !== undefined) mat.metalness = 0;
             if (mat.roughness !== undefined) mat.roughness = 1;
-            // Ensure double-sided rendering
             mat.side = THREE.DoubleSide;
           }
         });
         model.userData.noOutline = true;
         group.add(model);
+        // Retaining wall: fills gap from street (y=0) up to building base (y=liftY)
+        if (liftY > 0.1) {
+          var wallGeo = new THREE.BoxGeometry(size.x, liftY, size.z);
+          var wall = new THREE.Mesh(wallGeo, RETAINING_WALL_MAT);
+          wall.position.set(xBase + side * size.x / 2, liftY / 2, z + size.z / 2);
+          wall.userData.noOutline = true;
+          group.add(wall);
+        }
         z += size.z;
       } else {
         var w = 2.0 + Math.random() * 2.0;
@@ -815,8 +821,15 @@
         var d = 2.5 + Math.random() * 1.5;
         var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
         var bld = createProceduralBuilding(w, h, d, color);
-        // Base at street level, extends upward
-        bld.position.set(xBase + side * d / 2, 0, z + w / 2);
+        bld.position.set(xBase + side * d / 2, SEGMENT_SLOPE_DROP, z + w / 2);
+        // Retaining wall for procedural building
+        var pWall = new THREE.Mesh(
+          new THREE.BoxGeometry(d, SEGMENT_SLOPE_DROP, w),
+          RETAINING_WALL_MAT
+        );
+        pWall.position.set(xBase + side * d / 2, SEGMENT_SLOPE_DROP / 2, z + w / 2);
+        pWall.userData.noOutline = true;
+        group.add(pWall);
         group.add(bld);
         z += w;
       }
