@@ -728,15 +728,17 @@
         if (loaded === toLoad.length) kenneyModelsLoaded = true;
       });
     });
-    // Also preload obstacle GLBs into glbCache
-    if (GLB_ASSETS.obstacles) {
-      Object.keys(GLB_ASSETS.obstacles).forEach(function(type) {
-        var asset = GLB_ASSETS.obstacles[type];
-        loader.load(asset.file, function(gltf) {
-          glbCache[asset.file] = gltf.scene;
-        }, undefined, function() {});
-      });
-    }
+    // Also preload obstacle and wheel GLBs into glbCache
+    ['obstacles', 'wheels'].forEach(function(category) {
+      if (GLB_ASSETS[category]) {
+        Object.keys(GLB_ASSETS[category]).forEach(function(type) {
+          var asset = GLB_ASSETS[category][type];
+          loader.load(asset.file, function(gltf) {
+            glbCache[asset.file] = gltf.scene;
+          }, undefined, function() {});
+        });
+      }
+    });
   }
 
   function getKenneyBuilding() {
@@ -982,6 +984,13 @@
       couch:   { file: 'Meshy_AI_couch_car_0330162428_texture.glb', rotY: Math.PI },
       shoe:    { file: 'Meshy_AI_shoe_car_0330163356_texture.glb', rotY: Math.PI }
     },
+    wheels: {
+      chunky:  { file: 'chunky-tire.glb', rotY: 0 },
+      monster: { file: 'Monster-truck-tire.glb', rotY: 0 },
+      skinny:  { file: 'skinny-wheel.glb', rotY: 0 },
+      wagon:   { file: 'wagon-wheel.glb', rotY: 0 },
+      roller:  { file: 'spectrum-wheel.glb', rotY: 0 }
+    },
     obstacles: {
       barrel:     { file: 'Meshy_AI_barrel_0331141338_texture.glb', rotY: 0 },
       cone:       { file: 'Traffic-cone.glb', rotY: 0 },
@@ -1115,15 +1124,31 @@
   }
 
   function buildVehicleExtras(cd) {
-    // Wheels
+    // Wheels — use GLB if available, otherwise placeholder cylinder
     var wr = WHEEL_RADIUS[vehicleData.wheels.type];
-    var wheelGeo = new THREE.CylinderGeometry(wr, wr, 0.12, 16);
-    wheelGeo.rotateZ(Math.PI/2);
-    var wheelMat = createToonMaterial(vehicleData.wheels.color);
     var positions = CHASSIS_WHEELS[vehicleData.chassis.type];
+    var wheelGlb = GLB_ASSETS.wheels && GLB_ASSETS.wheels[vehicleData.wheels.type];
+    var wheelCached = wheelGlb && glbCache[wheelGlb.file];
+
     for (var i = 0; i < 4; i++) {
-      var w = new THREE.Mesh(wheelGeo, wheelMat);
-      w.position.set(positions[i].x, wr, positions[i].z);
+      var w;
+      if (wheelCached) {
+        w = wheelCached.clone();
+        // Scale GLB wheel to match expected radius
+        var wbox = new THREE.Box3().setFromObject(w);
+        var wsize = wbox.getSize(new THREE.Vector3());
+        var wscale = (wr * 2) / Math.max(wsize.y, 0.01);
+        w.scale.setScalar(wscale);
+        wbox.setFromObject(w);
+        w.position.set(positions[i].x, wr, positions[i].z);
+        // Flip right-side wheels
+        if (positions[i].x > 0) w.scale.x *= -1;
+      } else {
+        var wheelGeo = new THREE.CylinderGeometry(wr, wr, 0.12, 16);
+        wheelGeo.rotateZ(Math.PI/2);
+        w = new THREE.Mesh(wheelGeo, createToonMaterial(vehicleData.wheels.color));
+        w.position.set(positions[i].x, wr, positions[i].z);
+      }
       vehicleGroup.add(w);
       wheels.push(w);
     }
