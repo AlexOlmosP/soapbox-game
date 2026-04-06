@@ -698,12 +698,8 @@
   ];
   var ROOF_COLORS = [0xCC4433, 0x886644, 0xAA7755, 0x556677, 0x995544];
   // ===================== KENNEY BUILDING ASSETS =====================
+  // Only use our Meshy 3D buildings — no Kenney placeholders
   var KENNEY_BUILDINGS = [
-    'assets/kenney/building-small-a.glb',
-    'assets/kenney/building-small-b.glb',
-    'assets/kenney/building-small-c.glb',
-    'assets/kenney/building-small-d.glb',
-    'assets/kenney/building-garage.glb',
     'Meshy_AI_b1_0331130001_texture.glb',
     'shop-cafe.glb',
     'tall-office.glb',
@@ -780,18 +776,27 @@
       var model = getKenneyBuilding();
 
       if (model) {
+        // Rotate FIRST so measurements are in final orientation
+        model.rotation.y = (side < 0) ? -Math.PI / 2 : Math.PI / 2;
+        // Measure after rotation
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
+        // If building is wider than deep (facing wrong way), try opposite rotation
+        if (size.x > size.z * 2) {
+          model.rotation.y += Math.PI;
+          box.setFromObject(model);
+          size = box.getSize(new THREE.Vector3());
+        }
         // Scale so visible height above ground is 3-7m (add foundation below)
         var visibleH = 3 + Math.random() * 4;
         var totalH = visibleH + BUILDING_FOUNDATION;
         var scale = totalH / Math.max(size.y, 0.1);
         model.scale.setScalar(scale);
+        // Re-measure after scale
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        // Sink by foundation amount — visible part stays above ground
+        // Position: flush against road, sunk by foundation
         model.position.set(xBase + side * size.x / 2, -box.min.y - BUILDING_FOUNDATION, z + size.z / 2);
-        model.rotation.y = (side < 0) ? -Math.PI / 2 : Math.PI / 2;
         model.userData.noOutline = true;
         group.add(model);
         z += size.z;
