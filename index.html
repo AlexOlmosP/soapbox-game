@@ -1148,6 +1148,8 @@
       var w;
       if (wheelCached) {
         w = wheelCached.clone();
+        // Rotate 90° so wheel faces sideways (axle along X)
+        w.rotation.y = Math.PI / 2;
         // Scale GLB wheel to match expected radius
         var wbox = new THREE.Box3().setFromObject(w);
         var wsize = wbox.getSize(new THREE.Vector3());
@@ -1156,7 +1158,7 @@
         wbox.setFromObject(w);
         w.position.set(positions[i].x, wr, positions[i].z);
         // Flip right-side wheels
-        if (positions[i].x > 0) w.scale.x *= -1;
+        if (positions[i].x > 0) w.rotation.y = -Math.PI / 2;
       } else {
         var wheelGeo = new THREE.CylinderGeometry(wr, wr, 0.12, 16);
         wheelGeo.rotateZ(Math.PI/2);
