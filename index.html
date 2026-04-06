@@ -700,7 +700,7 @@
   // ===================== KENNEY BUILDING ASSETS =====================
   // Building assets with per-model rotation to face the street correctly
   var KENNEY_BUILDINGS = [
-    { file: 'Meshy_AI_b1_0331130001_texture.glb', frontRotY: Math.PI / 2 },
+    { file: 'Meshy_AI_b1_0331130001_texture.glb', frontRotY: 0 },
     { file: 'shop-cafe.glb', frontRotY: 0 },
     { file: 'tall-office.glb', frontRotY: 0 },
     { file: 'Row-House.glb', frontRotY: 0 },
@@ -795,18 +795,15 @@
         size = box.getSize(new THREE.Vector3());
         // Building base at street level (y=0), extends upward
         model.position.set(xBase + side * size.x / 2, -box.min.y, z + size.z / 2);
-        // Fix PBR materials: ensure textures are visible with our lighting
+        // Fix PBR materials: boost lighting so textures are visible
         model.traverse(function(child) {
           if (child.isMesh && child.material) {
             var mat = child.material;
-            // Convert MeshStandardMaterial to MeshBasicMaterial with texture
-            // This avoids dark shadows from missing environment maps
-            if (mat.map) {
-              child.material = new THREE.MeshLambertMaterial({ map: mat.map });
-            } else if (mat.color) {
-              child.material = new THREE.MeshLambertMaterial({ color: mat.color.clone() });
-            }
-            child.material.side = THREE.DoubleSide;
+            // Keep original material but reduce metalness/roughness that cause darkness
+            if (mat.metalness !== undefined) mat.metalness = 0;
+            if (mat.roughness !== undefined) mat.roughness = 1;
+            // Ensure double-sided rendering
+            mat.side = THREE.DoubleSide;
           }
         });
         model.userData.noOutline = true;
