@@ -776,38 +776,45 @@
       var model = getKenneyBuilding();
 
       if (model) {
-        // Rotate FIRST so measurements are in final orientation
-        model.rotation.y = (side < 0) ? -Math.PI / 2 : Math.PI / 2;
-        // Measure after rotation
+        // Try all 4 rotations, pick the one where building is deepest (X) and narrowest along street (Z)
+        var bestRotY = 0;
+        var bestRatio = 0;
+        for (var ri = 0; ri < 4; ri++) {
+          model.rotation.y = ri * Math.PI / 2;
+          var tbox = new THREE.Box3().setFromObject(model);
+          var tsize = tbox.getSize(new THREE.Vector3());
+          // We want depth (X, toward/away from road) to be large, width along street (Z) reasonable
+          var ratio = tsize.x / Math.max(tsize.z, 0.1);
+          if (ratio > bestRatio) { bestRatio = ratio; bestRotY = ri * Math.PI / 2; }
+        }
+        // Apply best rotation, then flip to face road based on side
+        model.rotation.y = bestRotY;
+        if (side > 0) model.rotation.y += Math.PI; // right side faces left
+        // Measure in final orientation
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
-        // If building is wider than deep (facing wrong way), try opposite rotation
-        if (size.x > size.z * 2) {
-          model.rotation.y += Math.PI;
-          box.setFromObject(model);
-          size = box.getSize(new THREE.Vector3());
-        }
-        // Scale so visible height above ground is 3-7m (add foundation below)
-        var visibleH = 3 + Math.random() * 4;
-        var totalH = visibleH + BUILDING_FOUNDATION;
-        var scale = totalH / Math.max(size.y, 0.1);
+        // Scale: building extends from street level DOWNWARD
+        // visibleH = how far above the lowest point the building rises
+        var visibleH = 4 + Math.random() * 4;
+        var scale = visibleH / Math.max(size.y, 0.1);
         model.scale.setScalar(scale);
         // Re-measure after scale
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        // Position: flush against road, sunk by foundation
-        model.position.set(xBase + side * size.x / 2, -box.min.y - BUILDING_FOUNDATION, z + size.z / 2);
+        // Position: TOP of building at y=0 (street level), extends downward
+        // box.max.y is the top after scaling — place it at y=0
+        model.position.set(xBase + side * size.x / 2, -box.max.y, z + size.z / 2);
         model.userData.noOutline = true;
         group.add(model);
         z += size.z;
       } else {
         var w = 2.0 + Math.random() * 2.0;
-        var h = 3 + Math.random() * 5 + BUILDING_FOUNDATION;
+        var h = 4 + Math.random() * 5;
         var d = 2.5 + Math.random() * 1.5;
         var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
         var bld = createProceduralBuilding(w, h, d, color);
-        // Position so top of foundation is at ground, rest extends below
-        bld.position.set(xBase + side * d / 2, -BUILDING_FOUNDATION, z + w / 2);
+        // Top at street level (y=0), extends downward
+        bld.position.set(xBase + side * d / 2, -h, z + w / 2);
         group.add(bld);
         z += w;
       }
