@@ -576,8 +576,9 @@
   sidewalkTexture.wrapT = THREE.RepeatWrapping;
   sidewalkTexture.repeat.set(2, 4); // tile more densely on sidewalk
 
-  var wallTexture = sidewalkTexture.clone();
-  wallTexture.needsUpdate = true;
+  var wallTexture = new THREE.TextureLoader().load('Seamless_tileable_cartoon_202604062223.png');
+  wallTexture.wrapS = THREE.RepeatWrapping;
+  wallTexture.wrapT = THREE.RepeatWrapping;
   wallTexture.repeat.set(3, 2);
 
   // ===================== TOON SHADING =====================
@@ -1858,22 +1859,8 @@
             }
           }
         } else if (row.pattern) {
-          for (var lane = 0; lane < 3; lane++) {
-            if (row.pattern[lane]) {
-              var obs = obstaclePool.get();
-              var type = row.type || 'cone';
-              var hb = OBSTACLE_HITBOXES[type] || OBSTACLE_HITBOXES.barrel;
-              applyObstacleModel(obs, type, hb);
-              obs.rotation.set(0, 0, 0);
-              obs.userData.type = type;
-              obs.userData.hitbox = hb;
-              obs.userData.nearMissCounted = false;
-        obs.userData.rampUsed = false;
-              obs.position.set(LANES[lane], 0, -SPAWN_DISTANCE);
-              obs.visible = true;
-              activeObstacles.push(obs);
-            }
-          }
+          // Route through spawnObstacleRow for safety checks (prevents 3-lane blocking)
+          spawnObstacleRow(row.pattern, -SPAWN_DISTANCE);
         }
         ev.currentRow++;
       }
