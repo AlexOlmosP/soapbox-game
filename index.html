@@ -565,6 +565,21 @@
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(3, 5, 8);
 
+  // ===================== GROUND TEXTURES =====================
+  var roadTexture = new THREE.TextureLoader().load('the_lines_from_202604062223.png');
+  roadTexture.wrapS = THREE.RepeatWrapping;
+  roadTexture.wrapT = THREE.RepeatWrapping;
+  roadTexture.repeat.set(1, 2); // tile along road length
+
+  var sidewalkTexture = new THREE.TextureLoader().load('Seamless_tileable_cartoon_202604062223.png');
+  sidewalkTexture.wrapS = THREE.RepeatWrapping;
+  sidewalkTexture.wrapT = THREE.RepeatWrapping;
+  sidewalkTexture.repeat.set(2, 4); // tile more densely on sidewalk
+
+  var wallTexture = sidewalkTexture.clone();
+  wallTexture.needsUpdate = true;
+  wallTexture.repeat.set(3, 2);
+
   // ===================== TOON SHADING =====================
   function createGradientMap3() {
     const data = new Uint8Array([0,0,0, 140,140,140, 255,255,255]);
@@ -772,7 +787,7 @@
 
   // Max slope drop across one segment — buildings raised by this amount
   var SEGMENT_SLOPE_DROP = SEGMENT_LENGTH * Math.sin(Math.atan(DOWNHILL_SLOPE));
-  var RETAINING_WALL_MAT = createToonMaterial(0x777788);
+  var RETAINING_WALL_MAT = new THREE.MeshLambertMaterial({ map: wallTexture });
 
   function createBuildingRow(side, segLen) {
     var group = new THREE.Group();
@@ -841,10 +856,11 @@
   function createSegment() {
     var group = new THREE.Group();
 
-    // Road
+    // Road with texture (includes lane markings)
     var roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, SEGMENT_LENGTH);
     roadGeo.rotateX(-Math.PI / 2);
-    var road = new THREE.Mesh(roadGeo, createToonMaterial(0x2A2A3E));
+    var roadMat = new THREE.MeshLambertMaterial({ map: roadTexture });
+    var road = new THREE.Mesh(roadGeo, roadMat);
     road.receiveShadow = true;
     group.add(road);
 
@@ -858,27 +874,12 @@
     rightCurb.position.set(ROAD_WIDTH / 2 + 0.15, 0.05, 0);
     group.add(rightCurb);
 
-    // Lane dividers (dashed)
-    var divGeo = new THREE.PlaneGeometry(0.12, 1.5);
-    divGeo.rotateX(-Math.PI / 2);
-    var divMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    var dashCount = Math.floor(SEGMENT_LENGTH / 3);
-    for (var d = 0; d < dashCount; d++) {
-      var zPos = -SEGMENT_LENGTH / 2 + d * 3 + 1.5;
-      // Left divider
-      var divL = new THREE.Mesh(divGeo, divMat);
-      divL.position.set(-LANE_WIDTH * 0.5, 0.005, zPos);
-      group.add(divL);
-      // Right divider
-      var divR = new THREE.Mesh(divGeo, divMat);
-      divR.position.set(LANE_WIDTH * 0.5, 0.005, zPos);
-      group.add(divR);
-    }
+    // No procedural lane dividers — road texture has them built in
 
-    // Sidewalks — wide enough to bridge road edge to buildings
+    // Sidewalks with brick texture
     var swGeo = new THREE.PlaneGeometry(3.5, SEGMENT_LENGTH);
     swGeo.rotateX(-Math.PI / 2);
-    var swMat = createToonMaterial(0x888899);
+    var swMat = new THREE.MeshLambertMaterial({ map: sidewalkTexture });
     var leftSW = new THREE.Mesh(swGeo, swMat);
     leftSW.position.set(-(ROAD_WIDTH / 2 + 1.75), 0.08, 0);
     leftSW.receiveShadow = true;
