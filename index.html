@@ -698,13 +698,13 @@
   ];
   var ROOF_COLORS = [0xCC4433, 0x886644, 0xAA7755, 0x556677, 0x995544];
   // ===================== KENNEY BUILDING ASSETS =====================
-  // Only use our Meshy 3D buildings — no Kenney placeholders
+  // Building assets with per-model rotation to face the street correctly
   var KENNEY_BUILDINGS = [
-    'Meshy_AI_b1_0331130001_texture.glb',
-    'shop-cafe.glb',
-    'tall-office.glb',
-    'Row-House.glb',
-    'corner-guilding.glb'
+    { file: 'Meshy_AI_b1_0331130001_texture.glb', frontRotY: Math.PI },
+    { file: 'shop-cafe.glb', frontRotY: 0 },
+    { file: 'tall-office.glb', frontRotY: 0 },
+    { file: 'Row-House.glb', frontRotY: 0 },
+    { file: 'corner-guilding.glb', frontRotY: 0 }
   ];
   var KENNEY_TREES = [
     'assets/kenney/grass-trees.glb',
@@ -715,7 +715,8 @@
 
   function preloadKenneyAssets() {
     var loader = new THREE.GLTFLoader();
-    var toLoad = KENNEY_BUILDINGS.concat(KENNEY_TREES);
+    var buildingFiles = KENNEY_BUILDINGS.map(function(b) { return b.file; });
+    var toLoad = buildingFiles.concat(KENNEY_TREES);
     var loaded = 0;
     toLoad.forEach(function(path) {
       loader.load(path, function(gltf) {
@@ -739,10 +740,10 @@
   }
 
   function getKenneyBuilding() {
-    var path = KENNEY_BUILDINGS[Math.floor(Math.random() * KENNEY_BUILDINGS.length)];
-    var cached = kenneyBuildingCache[path];
+    var entry = KENNEY_BUILDINGS[Math.floor(Math.random() * KENNEY_BUILDINGS.length)];
+    var cached = kenneyBuildingCache[entry.file];
     if (!cached) return null;
-    return cached.clone();
+    return { model: cached.clone(), frontRotY: entry.frontRotY || 0 };
   }
 
   function getKenneyTree() {
@@ -773,23 +774,13 @@
     var z = -segLen / 2;
 
     while (z < segLen / 2) {
-      var model = getKenneyBuilding();
+      var buildingData = getKenneyBuilding();
 
-      if (model) {
-        // Try all 4 rotations, pick the one where building is deepest (X) and narrowest along street (Z)
-        var bestRotY = 0;
-        var bestRatio = 0;
-        for (var ri = 0; ri < 4; ri++) {
-          model.rotation.y = ri * Math.PI / 2;
-          var tbox = new THREE.Box3().setFromObject(model);
-          var tsize = tbox.getSize(new THREE.Vector3());
-          // We want depth (X, toward/away from road) to be large, width along street (Z) reasonable
-          var ratio = tsize.x / Math.max(tsize.z, 0.1);
-          if (ratio > bestRatio) { bestRatio = ratio; bestRotY = ri * Math.PI / 2; }
-        }
-        // Apply best rotation, then flip to face road based on side
-        model.rotation.y = bestRotY;
-        if (side > 0) model.rotation.y += Math.PI; // right side faces left
+      if (buildingData) {
+        var model = buildingData.model;
+        // Apply per-model front rotation + side flip
+        // frontRotY orients the front face, then add side-specific rotation
+        model.rotation.y = buildingData.frontRotY + ((side < 0) ? Math.PI / 2 : -Math.PI / 2);
         // Measure in final orientation
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
