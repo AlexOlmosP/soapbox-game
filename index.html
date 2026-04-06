@@ -357,7 +357,7 @@
     barrel: new THREE.Vector3(0.6, 0.8, 0.6),
     cone: new THREE.Vector3(0.4, 0.6, 0.4),
     hay_bale: new THREE.Vector3(1.2, 0.8, 0.8),
-    ramp: new THREE.Vector3(1.2, 0.5, 1.0),
+    ramp: new THREE.Vector3(1.8, 1.0, 1.5),
     pothole: new THREE.Vector3(1.0, 0.05, 1.0),
     tire_stack: new THREE.Vector3(0.7, 1.0, 0.7),
     barrier: new THREE.Vector3(1.5, 0.9, 0.3),
@@ -862,16 +862,16 @@
       group.add(divR);
     }
 
-    // Sidewalks
-    var swGeo = new THREE.PlaneGeometry(2.0, SEGMENT_LENGTH);
+    // Sidewalks — wide enough to bridge road edge to buildings
+    var swGeo = new THREE.PlaneGeometry(3.5, SEGMENT_LENGTH);
     swGeo.rotateX(-Math.PI / 2);
     var swMat = createToonMaterial(0x888899);
     var leftSW = new THREE.Mesh(swGeo, swMat);
-    leftSW.position.set(-(ROAD_WIDTH / 2 + 1.0), 0.08, 0);
+    leftSW.position.set(-(ROAD_WIDTH / 2 + 1.75), 0.08, 0);
     leftSW.receiveShadow = true;
     group.add(leftSW);
     var rightSW = new THREE.Mesh(swGeo, swMat);
-    rightSW.position.set(ROAD_WIDTH / 2 + 1.0, 0.08, 0);
+    rightSW.position.set(ROAD_WIDTH / 2 + 1.75, 0.08, 0);
     rightSW.receiveShadow = true;
     group.add(rightSW);
 
@@ -1783,6 +1783,7 @@
             obs.userData.type = 'ramp';
             obs.userData.hitbox = rampHb;
             obs.userData.nearMissCounted = false;
+        obs.userData.rampUsed = false;
             obs.position.set(LANES[rl], 0, -SPAWN_DISTANCE);
             obs.visible = true;
             activeObstacles.push(obs);
@@ -1813,6 +1814,7 @@
           obs.userData.type = 'ramp';
           obs.userData.hitbox = rampHb2;
           obs.userData.nearMissCounted = false;
+        obs.userData.rampUsed = false;
           obs.position.set(LANES[row.rampLane], 0, -SPAWN_DISTANCE);
           obs.rotation.set(0, 0, 0);
           obs.visible = true;
@@ -1852,6 +1854,7 @@
               obs.userData.type = type;
               obs.userData.hitbox = hb;
               obs.userData.nearMissCounted = false;
+        obs.userData.rampUsed = false;
               obs.position.set(LANES[lane], 0, -SPAWN_DISTANCE);
               obs.visible = true;
               activeObstacles.push(obs);
@@ -2194,6 +2197,7 @@
         obs.userData.type = type;
         obs.userData.hitbox = hb;
         obs.userData.nearMissCounted = false;
+        obs.userData.rampUsed = false;
         obs.position.set(LANES[lane], 0, z);
         obs.visible = true;
         activeObstacles.push(obs);
@@ -2323,9 +2327,11 @@
       obsBox.setFromCenterAndSize(obsCenter, hb);
       if (playerBox.intersectsBox(obsBox)) {
         if (obs.userData.type === 'ramp') {
-          handleRampHit();
-          obs.visible = false;
-          return;
+          if (!obs.userData.rampUsed) {
+            obs.userData.rampUsed = true;
+            handleRampHit();
+          }
+          return; // Ramp stays visible, no game over
         }
         if (obs.userData.type === 'pothole') {
           applySpeedPenalty();
