@@ -801,9 +801,10 @@
         // Re-measure after scale
         box.setFromObject(model);
         size = box.getSize(new THREE.Vector3());
-        // Position: TOP of building at y=0 (street level), extends downward
-        // box.max.y is the top after scaling — place it at y=0
-        model.position.set(xBase + side * size.x / 2, -box.max.y, z + size.z / 2);
+        // Building base at street level (y=0), extends upward AND downward
+        // -box.min.y puts the base at y=0, then shift down by foundation
+        // so building extends from y=-foundation to y=visibleH
+        model.position.set(xBase + side * size.x / 2, -box.min.y - BUILDING_FOUNDATION, z + size.z / 2);
         model.userData.noOutline = true;
         group.add(model);
         z += size.z;
@@ -813,8 +814,8 @@
         var d = 2.5 + Math.random() * 1.5;
         var color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
         var bld = createProceduralBuilding(w, h, d, color);
-        // Top at street level (y=0), extends downward
-        bld.position.set(xBase + side * d / 2, -h, z + w / 2);
+        // Base sunk below street, visible portion rises above
+        bld.position.set(xBase + side * d / 2, -BUILDING_FOUNDATION, z + w / 2);
         group.add(bld);
         z += w;
       }
