@@ -1178,23 +1178,23 @@
       wheels.push(w);
     }
 
-    // Axle shafts connecting wheel pairs
+    // Axle shafts connecting each wheel pair (front and back)
     var axleMat = createToonMaterial(0x555566);
-    var frontZ = positions[0].z;
-    var backZ = positions[2].z;
-    var leftX = positions[0].x - WHEEL_OUTWARD;
-    var rightX = positions[1].x + WHEEL_OUTWARD;
-    var axleWidth = rightX - leftX;
-    var axleGeo = new THREE.CylinderGeometry(0.025, 0.025, axleWidth, 8);
-    axleGeo.rotateZ(Math.PI / 2);
-    // Front axle
-    var frontAxle = new THREE.Mesh(axleGeo, axleMat);
-    frontAxle.position.set(0, wr, frontZ);
-    vehicleGroup.add(frontAxle);
-    // Back axle
-    var backAxle = new THREE.Mesh(axleGeo, axleMat);
-    backAxle.position.set(0, wr, backZ);
-    vehicleGroup.add(backAxle);
+    // Group wheels into front pair (indices 0,1) and back pair (indices 2,3)
+    var pairs = [[positions[0], positions[1]], [positions[2], positions[3]]];
+    for (var pi = 0; pi < pairs.length; pi++) {
+      var leftPos = pairs[pi][0];
+      var rightPos = pairs[pi][1];
+      var axleLeftX = leftPos.x - WHEEL_OUTWARD;
+      var axleRightX = rightPos.x + WHEEL_OUTWARD;
+      var axleLen = axleRightX - axleLeftX;
+      var axleZ = (leftPos.z + rightPos.z) / 2;
+      var axleGeo = new THREE.CylinderGeometry(0.025, 0.025, axleLen, 8);
+      axleGeo.rotateZ(Math.PI / 2);
+      var axle = new THREE.Mesh(axleGeo, axleMat);
+      axle.position.set((axleLeftX + axleRightX) / 2, wr, axleZ);
+      vehicleGroup.add(axle);
+    }
 
     // Driver
     var dBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.15,0.3,8), createToonMaterial(0x4488FF));
