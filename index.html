@@ -1215,8 +1215,17 @@
         }
       });
       dbox.setFromObject(driverModel);
-      // Sit driver INSIDE chassis — bottom at ~40% of chassis height
-      driverModel.position.set(0, cd.h * 0.4 - dbox.min.y, 0);
+      // Per-chassis driver position adjustments
+      var driverOffsets = {
+        bathtub: { x: 0, y: cd.h * 0.4, z: 0 },
+        rocket:  { x: 0, y: cd.h * 0.7, z: 0 },
+        shoe:    { x: 0, y: cd.h * 0.4, z: 0.15 },
+        banana:  { x: 0, y: cd.h * 0.6, z: 0.15 },
+        couch:   { x: 0, y: cd.h * 0.2, z: 0 },
+        box:     { x: 0, y: cd.h * 0.4, z: 0 }
+      };
+      var dOff = driverOffsets[vehicleData.chassis.type] || { x: 0, y: cd.h * 0.4, z: 0 };
+      driverModel.position.set(dOff.x, dOff.y - dbox.min.y, dOff.z);
       driverModel.name = 'driver';
       vehicleGroup.add(driverModel);
     } else {
