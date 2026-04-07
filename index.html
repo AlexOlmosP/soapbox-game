@@ -1207,8 +1207,16 @@
       var dscale = 0.5 / Math.max(dsize.y, 0.01);
       driverModel.scale.setScalar(dscale);
       if (driverAsset.rotY) driverModel.rotation.y = driverAsset.rotY;
+      // Fix dark PBR materials — same as buildings
+      driverModel.traverse(function(child) {
+        if (child.isMesh && child.material) {
+          if (child.material.metalness !== undefined) child.material.metalness = 0;
+          if (child.material.roughness !== undefined) child.material.roughness = 1;
+        }
+      });
       dbox.setFromObject(driverModel);
-      driverModel.position.set(0, cd.h - dbox.min.y * 0.5, 0);
+      // Sit driver INSIDE chassis — bottom at ~40% of chassis height
+      driverModel.position.set(0, cd.h * 0.4 - dbox.min.y, 0);
       driverModel.name = 'driver';
       vehicleGroup.add(driverModel);
     } else {
