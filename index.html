@@ -293,39 +293,31 @@
 
 <div id="screen-garage" style="position:absolute;top:0;left:0;right:0;bottom:0;display:none;z-index:40;pointer-events:auto;">
 
-  <!-- Top bar: back + name -->
-  <div style="position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
-    <button onclick="quitToTitle()" style="background:rgba(0,0,0,0.3);border:none;border-radius:10px;color:white;font-family:var(--font-body);font-size:13px;font-weight:800;padding:8px 14px;cursor:pointer;backdrop-filter:blur(8px);">&#8592;</button>
-    <input id="garage-vehicle-name" type="text" value="My Soapbox" maxlength="20" oninput="garageSetName(this.value)" style="background:none;border:none;color:white;font-family:var(--font-display);font-size:24px;text-align:center;outline:none;text-shadow:2px 2px 0 rgba(0,0,0,0.4);width:200px;">
-    <!-- Stats inline -->
-    <div style="display:flex;gap:10px;align-items:center;">
-      <div style="display:flex;align-items:center;gap:3px;"><span style="color:#FF3344;font-family:var(--font-body);font-size:10px;font-weight:800;">SPD</span><div id="garage-stat-spd" style="display:flex;"></div></div>
-      <div style="display:flex;align-items:center;gap:3px;"><span style="color:#4488FF;font-family:var(--font-body);font-size:10px;font-weight:800;">HDL</span><div id="garage-stat-hdl" style="display:flex;"></div></div>
-      <div style="display:flex;align-items:center;gap:3px;"><span style="color:#FFD700;font-family:var(--font-body);font-size:10px;font-weight:800;">STY</span><div id="garage-stat-sty" style="display:flex;"></div></div>
+  <!-- Back button -->
+  <button onclick="quitToTitle()" style="position:absolute;top:16px;left:16px;z-index:4;background:rgba(0,0,0,0.4);border:none;border-radius:10px;color:white;font-family:var(--font-body);font-size:14px;font-weight:800;padding:10px 16px;cursor:pointer;">&#8592;</button>
+
+  <!-- Top: title + tabs + options (centered) -->
+  <div style="position:absolute;top:0;left:0;right:0;z-index:3;display:flex;flex-direction:column;align-items:center;padding-top:16px;">
+    <!-- Title -->
+    <input id="garage-vehicle-name" type="text" value="My Soapbox" maxlength="20" oninput="garageSetName(this.value)" style="background:none;border:none;color:white;font-family:var(--font-display);font-size:36px;text-align:center;outline:none;text-shadow:3px 3px 0 rgba(0,0,0,0.5);width:300px;margin-bottom:12px;">
+    <!-- Category tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="garage-tab" data-tab="chassis" onclick="garageSelectTab('chassis')" style="padding:10px 24px;border-radius:10px;border:none;background:#DB0A40;color:white;font-family:var(--font-body);font-size:14px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Chassis</button>
+      <button class="garage-tab" data-tab="wheels" onclick="garageSelectTab('wheels')" style="padding:10px 24px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:14px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;">Wheels</button>
     </div>
+    <!-- Part options -->
+    <div id="garage-part-grid" style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:0 20px;"></div>
   </div>
 
-  <!-- 3D vehicle fills the upper area (canvas behind this div) -->
+  <!-- Hidden elements kept for JS compatibility -->
+  <div id="garage-color-picker" style="display:none;"><div id="garage-color-swatches"></div></div>
+  <div id="garage-stat-spd" style="display:none;"></div>
+  <div id="garage-stat-hdl" style="display:none;"></div>
+  <div id="garage-stat-sty" style="display:none;"></div>
 
-  <!-- Bottom panel: parts + colors + RACE -->
-  <div style="position:absolute;bottom:0;left:0;right:0;z-index:3;background:linear-gradient(180deg, rgba(11,22,40,0) 0%, rgba(11,22,40,0.95) 15%, rgba(11,22,40,0.98) 100%);padding:16px 16px 12px 16px;">
-
-    <!-- Color picker (above grid when visible) -->
-    <div id="garage-color-picker" style="display:none;flex-direction:row;gap:6px;margin-bottom:10px;justify-content:center;flex-wrap:wrap;">
-      <div id="garage-color-swatches" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
-    </div>
-
-    <!-- Scrollable part grid -->
-    <div id="garage-part-grid" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;"></div>
-
-    <!-- Category tabs + RACE button -->
-    <div style="display:flex;align-items:center;gap:6px;">
-      <div style="display:flex;flex:1;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
-        <button class="garage-tab" data-tab="chassis" onclick="garageSelectTab('chassis')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:white;font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Chassis</button>
-        <button class="garage-tab" data-tab="wheels" onclick="garageSelectTab('wheels')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Wheels</button>
-      </div>
-      <button class="game-btn pulse" onclick="startRaceFromGarage()" style="background:linear-gradient(180deg,#DB0A40 0%,#A80830 100%);border:none;box-shadow:0 3px 0 #8A0628;font-size:18px;padding:10px 28px;letter-spacing:2px;border-radius:10px;margin-left:8px;">RACE!</button>
-    </div>
+  <!-- RACE button (centered, bottom) -->
+  <div style="position:absolute;bottom:24px;left:0;right:0;z-index:3;display:flex;justify-content:center;">
+    <button class="game-btn large pulse" onclick="startRaceFromGarage()" style="background:linear-gradient(180deg,#DB0A40 0%,#A80830 100%);border:none;box-shadow:0 5px 0 #8A0628,0 8px 20px rgba(219,10,64,0.3);font-size:28px;padding:18px 60px;letter-spacing:3px;border-radius:14px;">RACE!</button>
   </div>
 </div>
 
