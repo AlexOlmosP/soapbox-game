@@ -323,11 +323,6 @@
       <div style="display:flex;flex:1;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
         <button class="garage-tab" data-tab="chassis" onclick="garageSelectTab('chassis')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:white;font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Chassis</button>
         <button class="garage-tab" data-tab="wheels" onclick="garageSelectTab('wheels')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Wheels</button>
-        <button class="garage-tab" data-tab="top" onclick="garageSelectTab('top')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Top</button>
-        <button class="garage-tab" data-tab="side" onclick="garageSelectTab('side')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Side</button>
-        <button class="garage-tab" data-tab="front" onclick="garageSelectTab('front')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Front</button>
-        <button class="garage-tab" data-tab="back" onclick="garageSelectTab('back')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Back</button>
-        <button class="garage-tab" data-tab="helmet" onclick="garageSelectTab('helmet')" style="padding:10px 14px;border-radius:10px;border:none;background:#1A3060;color:rgba(255,255,255,0.5);font-family:var(--font-body);font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">Helmet</button>
       </div>
       <button class="game-btn pulse" onclick="startRaceFromGarage()" style="background:linear-gradient(180deg,#DB0A40 0%,#A80830 100%);border:none;box-shadow:0 3px 0 #8A0628;font-size:18px;padding:10px 28px;letter-spacing:2px;border-radius:10px;margin-left:8px;">RACE!</button>
     </div>
@@ -745,7 +740,7 @@
       });
     });
     // Also preload obstacle and wheel GLBs into glbCache
-    ['obstacles', 'wheels'].forEach(function(category) {
+    ['obstacles', 'wheels', 'driver'].forEach(function(category) {
       if (GLB_ASSETS[category]) {
         Object.keys(GLB_ASSETS[category]).forEach(function(type) {
           var asset = GLB_ASSETS[category][type];
@@ -1010,6 +1005,9 @@
       couch:   { file: 'Meshy_AI_couch_car_0330162428_texture.glb', rotY: Math.PI },
       shoe:    { file: 'Meshy_AI_shoe_car_0330163356_texture.glb', rotY: Math.PI }
     },
+    driver: {
+      default: { file: 'trellis_seed42_1775593551.glb', rotY: Math.PI }
+    },
     wheels: {
       chunky:  { file: 'chunky-tire.glb', rotY: 0 },
       monster: { file: 'Monster-truck-tire.glb', rotY: 0 },
@@ -1198,18 +1196,34 @@
       vehicleGroup.add(axle);
     }
 
-    // Driver
-    var dBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.15,0.3,8), createToonMaterial(0x4488FF));
-    dBody.position.y = cd.h + 0.15;
-    vehicleGroup.add(dBody);
-    var helmet = new THREE.Mesh(new THREE.SphereGeometry(0.14,12,8), createToonMaterial(vehicleData.driver.helmetColor));
-    helmet.position.y = cd.h + 0.38;
-    helmet.name = 'helmet';
-    vehicleGroup.add(helmet);
-    var visor = new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6,0,Math.PI), createToonMaterial(0x222222));
-    visor.position.set(0, cd.h + 0.37, -0.08);
-    visor.rotation.x = -Math.PI*0.15;
-    vehicleGroup.add(visor);
+    // Driver — use GLB if available, otherwise placeholder
+    var driverAsset = GLB_ASSETS.driver && GLB_ASSETS.driver.default;
+    var driverCached = driverAsset && glbCache[driverAsset.file];
+    if (driverCached) {
+      var driverModel = driverCached.clone();
+      var dbox = new THREE.Box3().setFromObject(driverModel);
+      var dsize = dbox.getSize(new THREE.Vector3());
+      // Scale driver to ~0.5m tall
+      var dscale = 0.5 / Math.max(dsize.y, 0.01);
+      driverModel.scale.setScalar(dscale);
+      if (driverAsset.rotY) driverModel.rotation.y = driverAsset.rotY;
+      dbox.setFromObject(driverModel);
+      driverModel.position.set(0, cd.h - dbox.min.y * 0.5, 0);
+      driverModel.name = 'driver';
+      vehicleGroup.add(driverModel);
+    } else {
+      var dBody = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.15,0.3,8), createToonMaterial(0x4488FF));
+      dBody.position.y = cd.h + 0.15;
+      vehicleGroup.add(dBody);
+      var helmet = new THREE.Mesh(new THREE.SphereGeometry(0.14,12,8), createToonMaterial(vehicleData.driver.helmetColor));
+      helmet.position.y = cd.h + 0.38;
+      helmet.name = 'helmet';
+      vehicleGroup.add(helmet);
+      var visor = new THREE.Mesh(new THREE.SphereGeometry(0.08,8,6,0,Math.PI), createToonMaterial(0x222222));
+      visor.position.set(0, cd.h + 0.37, -0.08);
+      visor.rotation.x = -Math.PI*0.15;
+      vehicleGroup.add(visor);
+    }
 
     // Decorations
     var decoPoints = CHASSIS_DECOS[vehicleData.chassis.type];
