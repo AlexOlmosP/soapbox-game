@@ -1156,9 +1156,11 @@
     var wheelGlb = GLB_ASSETS.wheels && GLB_ASSETS.wheels[vehicleData.wheels.type];
     var wheelCached = wheelGlb && glbCache[wheelGlb.file];
 
-    var WHEEL_OUTWARD = 0.1; // push wheels away from chassis
+    var WHEEL_OUTWARD = 0.1 + wr * 0.5; // bigger wheels pushed further out
     for (var i = 0; i < 4; i++) {
       var wx = positions[i].x + (positions[i].x > 0 ? WHEEL_OUTWARD : -WHEEL_OUTWARD);
+      // Spread front/back for larger wheels to prevent overlap
+      var wz = positions[i].z + (positions[i].z > 0 ? wr * 0.3 : -wr * 0.3);
       var w;
       if (wheelCached) {
         w = wheelCached.clone();
@@ -1167,12 +1169,12 @@
         var wsize = wbox.getSize(new THREE.Vector3());
         var wscale = (wr * 2) / Math.max(wsize.y, 0.01);
         w.scale.setScalar(wscale);
-        w.position.set(wx, wr, positions[i].z);
+        w.position.set(wx, wr, wz);
       } else {
         var wheelGeo = new THREE.CylinderGeometry(wr, wr, 0.12, 16);
         wheelGeo.rotateZ(Math.PI/2);
         w = new THREE.Mesh(wheelGeo, createToonMaterial(vehicleData.wheels.color));
-        w.position.set(wx, wr, positions[i].z);
+        w.position.set(wx, wr, wz);
       }
       vehicleGroup.add(w);
       wheels.push(w);
@@ -1188,7 +1190,7 @@
       var axleLeftX = leftPos.x - WHEEL_OUTWARD;
       var axleRightX = rightPos.x + WHEEL_OUTWARD;
       var axleLen = axleRightX - axleLeftX;
-      var axleZ = (leftPos.z + rightPos.z) / 2;
+      var axleZ = (leftPos.z + rightPos.z) / 2 + (leftPos.z > 0 ? wr * 0.3 : -wr * 0.3);
       var axleGeo = new THREE.CylinderGeometry(0.025, 0.025, axleLen, 8);
       axleGeo.rotateZ(Math.PI / 2);
       var axle = new THREE.Mesh(axleGeo, axleMat);
