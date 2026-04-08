@@ -1,1 +1,7 @@
 .vercel
+glb-originals/
+png-originals/
+node_modules/
+*.log
+package.json
+package-lock.json
