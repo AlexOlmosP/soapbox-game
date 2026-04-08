@@ -325,9 +325,13 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script>
 (function() {
+  // ===================== DEVICE TIER =====================
+  var IS_MOBILE = /Android|iPhone|iPad|iPod|webOS|Opera Mini|Mobile/i.test(navigator.userAgent);
+  var IS_LOW_END = IS_MOBILE || window.innerWidth < 1100;
+
   // ===================== CONSTANTS =====================
   const SEGMENT_LENGTH = 12;
-  const VISIBLE_SEGMENTS = 8;
+  const VISIBLE_SEGMENTS = IS_LOW_END ? 6 : 8;
   const ROAD_WIDTH = 5.4;
   const LANE_WIDTH = 1.4;
   const LANES = [-1.4, 0, 1.4];
@@ -531,11 +535,15 @@
   const effectsLayer = document.getElementById('effects-layer');
 
   // ===================== RENDERER & SCENE =====================
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({
+    antialias: !IS_LOW_END,
+    alpha: true,
+    powerPreference: 'high-performance'
+  });
+  renderer.setPixelRatio(IS_LOW_END ? 1 : Math.min(window.devicePixelRatio, 1.5));
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = !IS_LOW_END;
+  renderer.shadowMap.type = THREE.PCFShadowMap; // cheaper than PCFSoftShadowMap
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.NoToneMapping;
   renderer.setClearColor(0x000000, 0); // transparent clear
@@ -601,6 +609,7 @@
   }
 
   function addOutline(object, thickness) {
+    if (IS_LOW_END) return; // skip outlines on low-end — toon shading carries the look
     thickness = thickness !== undefined ? thickness : 0.04;
     var children = [];
     object.traverse(function(child) {
@@ -662,8 +671,8 @@
 
   const sunLight = new THREE.DirectionalLight(0xFFFFFF, 1.1);
   sunLight.position.set(4, 10, 5);
-  sunLight.castShadow = true;
-  sunLight.shadow.mapSize.set(1024, 1024);
+  sunLight.castShadow = !IS_LOW_END;
+  sunLight.shadow.mapSize.set(IS_LOW_END ? 256 : 512, IS_LOW_END ? 256 : 512);
   sunLight.shadow.camera.near = 1;
   sunLight.shadow.camera.far = 40;
   sunLight.shadow.camera.left = -8;
@@ -1467,18 +1476,20 @@
     }
   }
 
+  // Reusable boxes for collectible checks
+  var _colPlayerBox = new THREE.Box3();
+  var _colItemBox = new THREE.Box3();
   function checkCollectibles() {
-    var pY = 0.4 + playerGroup.position.y;
-    var pCenter = new THREE.Vector3(playerX, pY, 0);
-    var pBox = new THREE.Box3().setFromCenterAndSize(pCenter, PLAYER_HITBOX);
+    _pCenter.set(playerX, 0.4 + playerGroup.position.y, 0);
+    _colPlayerBox.setFromCenterAndSize(_pCenter, PLAYER_HITBOX);
     for (var i = activeCollectibles.length - 1; i >= 0; i--) {
       var item = activeCollectibles[i];
       if (!item.visible) continue;
       // Get world position (collectibles are in trackGroup)
       item.getWorldPosition(_worldPos);
       if (_worldPos.z < -2 || _worldPos.z > 3) continue;
-      var iBox = new THREE.Box3().setFromCenterAndSize(_worldPos, COLLECTIBLE_HITBOX);
-      if (pBox.intersectsBox(iBox)) {
+      _colItemBox.setFromCenterAndSize(_worldPos, COLLECTIBLE_HITBOX);
+      if (_colPlayerBox.intersectsBox(_colItemBox)) {
         collectItem(item);
         if (item.userData.collectType === 'coin') coinPool.returnToPool(item);
         else specialPool.returnToPool(item);
@@ -2348,14 +2359,15 @@
   // ===================== COLLISION =====================
   var playerBox = new THREE.Box3();
   var obsBox = new THREE.Box3();
-
   var _worldPos = new THREE.Vector3();
+  var _pCenter = new THREE.Vector3();
+  var _obsCenter = new THREE.Vector3();
+
   function checkCollisions() {
     if (isJumping && playerGroup.position.y > 0.5) return;
 
-    var pY = 0.4 + playerGroup.position.y;
-    var center = new THREE.Vector3(playerX, pY, 0);
-    playerBox.setFromCenterAndSize(center, PLAYER_HITBOX);
+    _pCenter.set(playerX, 0.4 + playerGroup.position.y, 0);
+    playerBox.setFromCenterAndSize(_pCenter, PLAYER_HITBOX);
 
     for (var i = 0; i < activeObstacles.length; i++) {
       var obs = activeObstacles[i];
@@ -2364,8 +2376,8 @@
       obs.getWorldPosition(_worldPos);
       if (_worldPos.z < -2 || _worldPos.z > 3) continue;
       var hb = obs.userData.hitbox;
-      var obsCenter = new THREE.Vector3(_worldPos.x, _worldPos.y + hb.y / 2, _worldPos.z);
-      obsBox.setFromCenterAndSize(obsCenter, hb);
+      _obsCenter.set(_worldPos.x, _worldPos.y + hb.y / 2, _worldPos.z);
+      obsBox.setFromCenterAndSize(_obsCenter, hb);
       if (playerBox.intersectsBox(obsBox)) {
         if (obs.userData.type === 'ramp') {
           if (!obs.userData.rampUsed) {
@@ -3199,12 +3211,7 @@
       updateGameover(now);
     }
 
-    // Sun follows player roughly
-    if (gameState !== 'title' && gameState !== 'garage') {
-      sunLight.position.set(playerX + 4, 10, 5);
-      sunLight.target.position.set(playerX, 0, -5);
-    }
-
+    // Sun stays fixed — was forcing shadow recalculation every frame
     renderer.render(scene, camera);
   }
 
