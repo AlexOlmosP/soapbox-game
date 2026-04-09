@@ -158,9 +158,6 @@
   #speed-fill { height:100%; background:linear-gradient(90deg,#44DD66,#FFD700,#FF3344); border-radius:6px; width:0%; transition:width 0.3s; }
   #hud-multiplier { position:absolute; top:50px; right:16px; color:#FFD700; font-family:var(--font-display); font-size:14px; text-shadow:1px 1px 3px rgba(0,0,0,0.7); z-index:10; }
 
-  .coin-bump { animation: coinBump 0.2s ease-out; }
-  @keyframes coinBump { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
-
   .new-highscore { color:#FFD700; font-size:28px; font-family:var(--font-display); text-shadow:0 0 15px rgba(255,215,0,0.6); animation: hsBlink 0.6s ease-in-out infinite alternate; margin-bottom:10px; }
   @keyframes hsBlink { 0%{opacity:0.7} 100%{opacity:1} }
 
@@ -188,12 +185,6 @@
   .game-btn.pulse { animation: btnPulse 1.5s ease-in-out infinite; }
   @keyframes btnPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
 
-  .coin-flash {
-    position: absolute; inset: 0; pointer-events: none; z-index: 7;
-    background: radial-gradient(circle at 50% 50%, rgba(255,215,0,0.25) 0%, transparent 70%);
-    animation: coinFlashAnim 0.25s ease-out forwards;
-  }
-  @keyframes coinFlashAnim { 0%{opacity:1} 100%{opacity:0} }
 
   @media (max-width: 480px) {
     #screen-title h1:first-child { font-size: 48px !important; }
@@ -220,18 +211,12 @@
       <span style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:2px;">High Score</span>
       <span id="title-highscore" style="font-family:var(--font-display);font-size:28px;color:white;text-shadow:var(--text-shadow);">0</span>
     </div>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-      <span style="font-size:24px;">&#129689;</span>
-      <span style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:2px;">Total Coins</span>
-      <span id="title-coins" style="font-family:var(--font-display);font-size:28px;color:white;text-shadow:var(--text-shadow);">0</span>
-    </div>
   </div>
 </div>
 
 <div id="hud" style="display:none;">
   <div class="hud-item" id="hud-distance">&#127937; 0 m</div>
   <div class="hud-item" id="hud-score">&#11088; 0</div>
-  <div class="hud-item" id="hud-coins">&#129689; 0</div>
   <button id="hud-pause" style="pointer-events:auto;font-size:22px;background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:44px;height:44px;cursor:pointer;color:white;-webkit-tap-highlight-color:transparent;" onclick="togglePause()">&#9208;</button>
 </div>
 <div id="hud-speed" style="display:none;"><div id="speed-fill"></div></div>
@@ -267,10 +252,6 @@
     <div class="stat-row">
       <span class="stat-label">SCORE</span>
       <span class="stat-value" id="go-score">0</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">COINS</span>
-      <span class="stat-value" id="go-coins">0</span>
     </div>
     <div class="stat-row">
       <span class="stat-label">NEAR MISSES</span>
@@ -392,7 +373,6 @@
   let gameState = 'loading';
   let score = 0;
   let distance = 0;
-  let coins = 0;
   let scrollSpeed = BASE_SPEED * 0.5;
   let currentLane = 1;
   let targetX = 0;
@@ -519,13 +499,11 @@
   const hudEl = document.getElementById('hud');
   const hudDistance = document.getElementById('hud-distance');
   const hudScore = document.getElementById('hud-score');
-  const hudCoins = document.getElementById('hud-coins');
   const countdownOverlay = document.getElementById('countdown-overlay');
   const countdownText = document.getElementById('countdown-text');
   const gameoverOverlay = document.getElementById('gameover-overlay');
   const goDistance = document.getElementById('go-distance');
   const goScore = document.getElementById('go-score');
-  const goCoins = document.getElementById('go-coins');
   const goNearMisses = document.getElementById('go-nearmisses');
   const goStyle = document.getElementById('go-style');
   const goHighscore = document.getElementById('go-highscore');
@@ -1399,18 +1377,7 @@
   }
 
   // ===================== COLLECTIBLES =====================
-  var coinPool, specialPool;
-
-  function createPlaceholderCoin() {
-    var group = new THREE.Group();
-    var geo = new THREE.CylinderGeometry(0.2, 0.2, 0.04, 12);
-    geo.rotateZ(Math.PI / 2);
-    var mat = createToonMaterial(0xFFDD00);
-    group.add(new THREE.Mesh(geo, mat));
-    addOutline(group, 0.02);
-    group.userData.collectType = 'coin';
-    return group;
-  }
+  var specialPool;
 
   function createPlaceholderSpecial() {
     var group = new THREE.Group();
@@ -1423,28 +1390,11 @@
   }
 
   function initCollectibles() {
-    coinPool = new ObjectPool(function() {
-      var obj = createPlaceholderCoin();
-      trackGroup.add(obj); // In trackGroup so tilt handles slope
-      return obj;
-    }, 40);
     specialPool = new ObjectPool(function() {
       var obj = createPlaceholderSpecial();
       trackGroup.add(obj); // In trackGroup so tilt handles slope
       return obj;
     }, 10);
-  }
-
-  function spawnCoinsForPattern(pattern, z) {
-    for (var lane = 0; lane < 3; lane++) {
-      if (!pattern[lane] && Math.random() < 0.6) {
-        var c = coinPool.get();
-        c.position.set(LANES[lane], 0.8, z);
-        c.visible = true;
-        c.userData.collectType = 'coin';
-        activeCollectibles.push(c);
-      }
-    }
   }
 
   function spawnSpecialForPattern(pattern, z) {
@@ -1469,14 +1419,12 @@
     for (var i = activeCollectibles.length - 1; i >= 0; i--) {
       var item = activeCollectibles[i];
       item.position.z += scrollSpeed * dt;
-      // Spin and bob — Y base set at spawn, no slope recalc (trackGroup handles tilt)
+      // Spin and bob — Y base set at spawn (trackGroup handles tilt)
       item.rotation.y = time * 0.003;
-      var baseY = item.userData.elevated ? (item.userData.elevatedY || 2.0) : (item.userData.collectType === 'coin' ? 0.8 : 1.0);
-      item.position.y = baseY + Math.sin(time * 0.004 + item.position.z) * 0.15;
+      item.position.y = 1.0 + Math.sin(time * 0.004 + item.position.z) * 0.15;
       // Recycle
       if (item.position.z > 15) {
-        if (item.userData.collectType === 'coin') coinPool.returnToPool(item);
-        else specialPool.returnToPool(item);
+        specialPool.returnToPool(item);
         activeCollectibles.splice(i, 1);
       }
     }
@@ -1497,8 +1445,7 @@
       _colItemBox.setFromCenterAndSize(_worldPos, COLLECTIBLE_HITBOX);
       if (_colPlayerBox.intersectsBox(_colItemBox)) {
         collectItem(item);
-        if (item.userData.collectType === 'coin') coinPool.returnToPool(item);
-        else specialPool.returnToPool(item);
+        specialPool.returnToPool(item);
         activeCollectibles.splice(i, 1);
       }
     }
@@ -1506,16 +1453,7 @@
 
   function collectItem(item) {
     var type = item.userData.collectType;
-    if (type === 'coin') {
-      coins++;
-      score += 100 * styleMultiplier;
-      showFloatingText('+100', item.position, '#FFD700');
-      // Bump animation on HUD coin counter
-      hudCoins.classList.remove('coin-bump');
-      void hudCoins.offsetWidth;
-      hudCoins.classList.add('coin-bump');
-      flashCoinCollect();
-    } else if (type === 'star') {
+    if (type === 'star') {
       score += 500 * styleMultiplier;
       showFloatingText('+500', item.position, '#FF44FF');
     } else if (type === 'boost') {
@@ -1768,11 +1706,6 @@
         this.startRampEvent();
         return true;
       }
-      // Coin bonus — rest phase only
-      if (dist > 300 && difficultyManager.isRestPhase() && Math.random() < 0.03) {
-        this.startCoinBonusEvent();
-        return true;
-      }
       // Cheer zone — rest phase only
       if (dist > 250 && difficultyManager.isRestPhase() && Math.random() < 0.02) {
         this.startCheerEvent();
@@ -1800,40 +1733,25 @@
       };
     },
 
-    startCoinBonusEvent: function() {
-      var rows = [];
-      var patterns = [
-        [false, true, false],
-        [true, false, true],
-        [false, true, false]
-      ];
-      for (var i = 0; i < patterns.length; i++) {
-        rows.push({ dist: i * 4, coinPattern: patterns[i] });
-      }
-      this.activeEvent = { rows: rows, currentRow: 0, startDist: distance };
-    },
-
     startCheerEvent: function() {
+      // Cheer zone: 4 empty rows (no obstacles) — breathing room with banner
       var rows = [];
       for (var i = 0; i < 4; i++) {
-        rows.push({ dist: i * 6, coinPattern: [true, true, true], noObstacles: true });
+        rows.push({ dist: i * 6, noObstacles: true });
       }
       this.activeEvent = { rows: rows, currentRow: 0, startDist: distance, banner: 'CHEER ZONE!' };
-      if (this.activeEvent.banner) {
-        showMilestoneBannerCustom(this.activeEvent.banner);
-      }
+      showMilestoneBannerCustom('CHEER ZONE!');
     },
 
     startElevatedEvent: function() {
-      // Ramp up → elevated platform (player jumps and stays high) → coins → ramp down
-      var rows = [];
-      // All 3 lanes get ramps — player MUST jump
-      rows.push({ dist: 0, allRamps: true });
-      // While airborne, dense coins at elevated height
-      for (var i = 0; i < 6; i++) {
-        rows.push({ dist: 4 + i * 3, coinPattern: [true, true, true], elevated: true });
-      }
-      this.activeEvent = { rows: rows, currentRow: 0, startDist: distance, banner: 'OVERGROUND!', isElevated: true };
+      // All 3 lanes get ramps — player MUST jump (single row, then event ends)
+      this.activeEvent = {
+        rows: [{ dist: 0, allRamps: true }],
+        currentRow: 0,
+        startDist: distance,
+        banner: 'OVERGROUND!',
+        isElevated: true
+      };
       showMilestoneBannerCustom('OVERGROUND!');
     },
 
@@ -1855,27 +1773,10 @@
             obs.userData.type = 'ramp';
             obs.userData.hitbox = rampHb;
             obs.userData.nearMissCounted = false;
-        obs.userData.rampUsed = false;
+            obs.userData.rampUsed = false;
             obs.position.set(LANES[rl], 0, -SPAWN_DISTANCE);
             obs.visible = true;
             activeObstacles.push(obs);
-          }
-          ev.currentRow++;
-          continue;
-        } else if (row.elevated) {
-          // Coins at elevated height (player is in the air from the ramp)
-          for (var lane = 0; lane < 3; lane++) {
-            if (row.coinPattern && row.coinPattern[lane]) {
-              var coin = coinPool.get();
-              if (coin) {
-                coin.position.set(LANES[lane], 2.0, -SPAWN_DISTANCE);
-                coin.visible = true;
-                coin.userData.collectType = 'coin';
-                coin.userData.elevated = true;
-                coin.userData.elevatedY = 2.0;
-                activeCollectibles.push(coin);
-              }
-            }
           }
           ev.currentRow++;
           continue;
@@ -1886,35 +1787,13 @@
           obs.userData.type = 'ramp';
           obs.userData.hitbox = rampHb2;
           obs.userData.nearMissCounted = false;
-        obs.userData.rampUsed = false;
+          obs.userData.rampUsed = false;
           obs.position.set(LANES[row.rampLane], 0, -SPAWN_DISTANCE);
           obs.rotation.set(0, 0, 0);
           obs.visible = true;
           activeObstacles.push(obs);
-          for (var ci = 0; ci < 6; ci++) {
-            var coin = coinPool.get();
-            if (coin) {
-              var rampCoinY = 1.2 + Math.sin(ci / 5 * Math.PI) * 1.0;
-              coin.position.set(LANES[row.rampLane], rampCoinY, -SPAWN_DISTANCE - 3 - ci * 1.5);
-              coin.visible = true;
-              coin.userData.collectType = 'coin';
-              coin.userData.elevated = true;
-              coin.userData.elevatedY = rampCoinY;
-              activeCollectibles.push(coin);
-            }
-          }
-        } else if (row.coinPattern) {
-          for (var lane = 0; lane < 3; lane++) {
-            if (row.coinPattern[lane]) {
-              var coin = coinPool.get();
-              if (coin) {
-                coin.position.set(LANES[lane], 0.8, -SPAWN_DISTANCE);
-                coin.visible = true;
-                coin.userData.collectType = 'coin';
-                activeCollectibles.push(coin);
-              }
-            }
-          }
+        } else if (row.noObstacles) {
+          // Cheer zone empty rows — nothing to spawn, just breathing room
         } else if (row.pattern) {
           // Route through spawnObstacleRow for safety checks (prevents 3-lane blocking)
           spawnObstacleRow(row.pattern, -SPAWN_DISTANCE);
@@ -2137,10 +2016,6 @@
   function getHighScore() {
     return parseInt(localStorage.getItem('soapbox:highscore') || '0');
   }
-  function saveTotalCoins(add) {
-    var current = parseInt(localStorage.getItem('soapbox:total-coins') || '0');
-    localStorage.setItem('soapbox:total-coins', (current + add).toString());
-  }
 
   // ===================== HUD SPEED =====================
   function updateHUDSpeed() {
@@ -2261,7 +2136,6 @@
         activeObstacles.push(obs);
       }
     }
-    spawnCoinsForPattern(pattern, z);
     spawnSpecialForPattern(pattern, z);
     difficultyManager.onRowSpawned();
   }
@@ -2297,17 +2171,8 @@
     if (distanceSinceLastSpawn < rowGap) return;
     distanceSinceLastSpawn = 0;
 
-    // Rest valley: more coin-only rows
+    // Rest valley: empty row (breathing room)
     if (difficultyManager.isRestPhase() && Math.random() < 0.4) {
-      for (var ci = 0; ci < 3; ci++) {
-        var coin = coinPool.get();
-        if (coin) {
-          coin.position.set(LANES[ci], 0.8, -SPAWN_DISTANCE);
-          coin.visible = true;
-          coin.userData.collectType = 'coin';
-          activeCollectibles.push(coin);
-        }
-      }
       difficultyManager.onRowSpawned();
       return;
     }
@@ -2457,7 +2322,6 @@
   function updateHUD() {
     hudDistance.textContent = '\u{1F3C1} ' + Math.floor(distance) + ' m';
     hudScore.textContent = '\u2B50 ' + Math.floor(score);
-    hudCoins.textContent = '\u{1FA99} ' + coins;
   }
 
   // ===================== STATE MACHINE =====================
@@ -2552,11 +2416,9 @@
       gameoverShown = true;
       var finalScore = Math.floor(score);
       goDistance.textContent = Math.floor(distance) + ' m';
-      goCoins.textContent = coins;
       goNearMisses.textContent = nearMisses;
       goStyle.textContent = 'x' + styleMultiplier.toFixed(2);
       var isNew = saveHighScore(finalScore);
-      saveTotalCoins(coins);
       goHighscore.textContent = getHighScore();
       if (isNew) {
         goHighscoreBadge.style.display = 'block';
@@ -2574,7 +2436,6 @@
     applyVehicleStats();
     score = 0;
     distance = 0;
-    coins = 0;
     nearMisses = 0;
     isBoosted = false;
     boostEndTime = 0;
@@ -2612,9 +2473,7 @@
 
     // Return all collectibles
     for (var i = activeCollectibles.length - 1; i >= 0; i--) {
-      var c = activeCollectibles[i];
-      if (c.userData.collectType === 'coin') coinPool.returnToPool(c);
-      else specialPool.returnToPool(c);
+      specialPool.returnToPool(activeCollectibles[i]);
     }
     activeCollectibles = [];
 
@@ -2693,7 +2552,6 @@
     // Reset game state
     score = 0;
     distance = 0;
-    coins = 0;
     nearMisses = 0;
     styleMultiplier = 1.0;
     isBoosted = false;
@@ -2731,9 +2589,7 @@
 
     // Return all collectibles
     for (var i = activeCollectibles.length - 1; i >= 0; i--) {
-      var c = activeCollectibles[i];
-      if (c.userData.collectType === 'coin') coinPool.returnToPool(c);
-      else specialPool.returnToPool(c);
+      specialPool.returnToPool(activeCollectibles[i]);
     }
     activeCollectibles = [];
 
@@ -2768,7 +2624,6 @@
     // Show title
     document.getElementById('screen-title').style.display = 'flex';
     document.getElementById('title-highscore').textContent = getHighScore().toLocaleString();
-    document.getElementById('title-coins').textContent = (parseInt(localStorage.getItem('soapbox:total-coins') || '0')).toLocaleString();
 
     setupTitleLighting();
     camera.position.set(2.5, 2, 3.5);
@@ -2970,7 +2825,6 @@
     // Reset race state
     score = 0;
     distance = 0;
-    coins = 0;
     nearMisses = 0;
     isBoosted = false;
     boostEndTime = 0;
@@ -3131,13 +2985,6 @@
     requestAnimationFrame(tick);
   }
 
-  function flashCoinCollect() {
-    var flash = document.createElement('div');
-    flash.className = 'coin-flash';
-    document.getElementById('effects-layer').appendChild(flash);
-    setTimeout(function() { flash.remove(); }, 250);
-  }
-
   function hideVisualOverlays() {
     document.getElementById('speed-lines').style.opacity = '0';
     document.getElementById('boost-overlay').style.opacity = '0';
@@ -3241,7 +3088,6 @@
 
     // Populate title screen stats
     document.getElementById('title-highscore').textContent = getHighScore().toLocaleString();
-    document.getElementById('title-coins').textContent = (parseInt(localStorage.getItem('soapbox:total-coins') || '0')).toLocaleString();
 
     // Wire up title button (backup for onclick)
     document.getElementById('tap-to-start').addEventListener('click', function(e) {
