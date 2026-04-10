@@ -1033,16 +1033,22 @@
       if (child.isMesh && child.material) {
         if (preserveTextures) {
           // Keep original per-mesh colors and texture maps — just add toon shading
-          var origColor = child.material.color ? child.material.color.clone() : new THREE.Color(0xcccccc);
+          var origColor = child.material.color ? child.material.color.clone() : new THREE.Color(0xffffff);
           var origMap = child.material.map || null;
-          // If the material has a texture map, force color to white so it doesn't darken the texture.
-          // (Some GLBs ship with color=0x000000 + a texture, which makes toon material render black.)
-          if (origMap) origColor.setRGB(1, 1, 1);
-          // Also fix near-black colors with no map (rendering as black against toon shading)
+          // If there's a texture map, color must be white so it doesn't tint/darken the texture
+          if (origMap) {
+            origColor.setRGB(1, 1, 1);
+            // Ensure texture is in sRGB color space (some GLB loaders default to linear)
+            origMap.encoding = THREE.sRGBEncoding;
+            origMap.needsUpdate = true;
+          }
+          // Fix near-black material color with no map (would render black under toon shading)
           var brightness = (origColor.r + origColor.g + origColor.b) / 3;
-          if (!origMap && brightness < 0.05) origColor.setRGB(0.8, 0.8, 0.8);
+          if (!origMap && brightness < 0.1) origColor.setRGB(0.85, 0.85, 0.85);
           var toonMat = createToonMaterial(origColor);
           if (origMap) toonMat.map = origMap;
+          // Disable vertex colors which can fight with the texture
+          toonMat.vertexColors = false;
           child.material = toonMat;
         } else {
           var c = color ? new THREE.Color(color) :
