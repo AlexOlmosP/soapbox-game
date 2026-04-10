@@ -1077,7 +1077,28 @@
       var glbFile = glbAsset.file || glbAsset;
       var extraRotY = glbAsset.rotY || 0;
       loadGLB(glbFile).then(function(model) {
-        toonifyModel(model, null, true); // preserve original multi-color textures (toon shading)
+        if (chassisType === 'box') {
+          // box-car GLB (from trimesh) has no NORMAL attribute, so lit shaders render black.
+          // Use unlit MeshBasicMaterial — it doesn't need normals and shows the texture as-is.
+          model.traverse(function(c) {
+            if (c.isMesh && c.material) {
+              var basicMat = new THREE.MeshBasicMaterial({
+                map: c.material.map || null,
+                color: c.material.map ? 0xffffff : (c.material.color || new THREE.Color(0xcccccc))
+              });
+              if (basicMat.map) {
+                basicMat.map.encoding = THREE.sRGBEncoding;
+                basicMat.map.needsUpdate = true;
+              }
+              c.material = basicMat;
+              c.castShadow = true;
+              c.receiveShadow = true;
+            }
+          });
+          addOutline(model);
+        } else {
+          toonifyModel(model, null, true); // preserve original multi-color textures (toon shading)
+        }
         // Measure raw model size
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
