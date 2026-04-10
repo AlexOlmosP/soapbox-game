@@ -1035,6 +1035,12 @@
           // Keep original per-mesh colors and texture maps — just add toon shading
           var origColor = child.material.color ? child.material.color.clone() : new THREE.Color(0xcccccc);
           var origMap = child.material.map || null;
+          // If the material has a texture map, force color to white so it doesn't darken the texture.
+          // (Some GLBs ship with color=0x000000 + a texture, which makes toon material render black.)
+          if (origMap) origColor.setRGB(1, 1, 1);
+          // Also fix near-black colors with no map (rendering as black against toon shading)
+          var brightness = (origColor.r + origColor.g + origColor.b) / 3;
+          if (!origMap && brightness < 0.05) origColor.setRGB(0.8, 0.8, 0.8);
           var toonMat = createToonMaterial(origColor);
           if (origMap) toonMat.map = origMap;
           child.material = toonMat;
@@ -1208,7 +1214,7 @@
         shoe:    { x: 0, y: cd.h * 0.4, z: 0.15 },
         banana:  { x: 0, y: cd.h * 0.6, z: 0.15 },
         couch:   { x: 0, y: cd.h * 0.2, z: 0 },
-        box:     { x: 0, y: cd.h * 0.4, z: 0.2 }
+        box:     { x: 0, y: cd.h * 0.4, z: 0.1 }
       };
       var dOff = driverOffsets[vehicleData.chassis.type] || { x: 0, y: cd.h * 0.4, z: 0 };
       driverModel.position.set(dOff.x, dOff.y - dbox.min.y, dOff.z);
