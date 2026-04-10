@@ -1065,21 +1065,7 @@
       var glbFile = glbAsset.file || glbAsset;
       var extraRotY = glbAsset.rotY || 0;
       loadGLB(glbFile).then(function(model) {
-        // Brighten PBR materials so textures pop in our lighting (same fix as buildings)
-        model.traverse(function(child) {
-          if (child.isMesh && child.material) {
-            var mat = child.material;
-            if (mat.metalness !== undefined) mat.metalness = 0;
-            if (mat.roughness !== undefined) mat.roughness = 1;
-            if (mat.emissive && mat.color) {
-              // Slight emissive boost using the base color for vibrancy
-              mat.emissive.copy(mat.color).multiplyScalar(0.15);
-            }
-            mat.side = THREE.DoubleSide;
-            child.castShadow = true;
-            child.receiveShadow = true;
-          }
-        });
+        toonifyModel(model, null, true); // preserve original multi-color textures (toon shading)
         // Measure raw model size
         var box = new THREE.Box3().setFromObject(model);
         var size = box.getSize(new THREE.Vector3());
@@ -1222,7 +1208,7 @@
         shoe:    { x: 0, y: cd.h * 0.4, z: 0.15 },
         banana:  { x: 0, y: cd.h * 0.6, z: 0.15 },
         couch:   { x: 0, y: cd.h * 0.2, z: 0 },
-        box:     { x: 0, y: cd.h * 0.4, z: 0 }
+        box:     { x: 0, y: cd.h * 0.4, z: 0.2 }
       };
       var dOff = driverOffsets[vehicleData.chassis.type] || { x: 0, y: cd.h * 0.4, z: 0 };
       driverModel.position.set(dOff.x, dOff.y - dbox.min.y, dOff.z);
