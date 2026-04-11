@@ -185,6 +185,142 @@
   .game-btn.pulse { animation: btnPulse 1.5s ease-in-out infinite; }
   @keyframes btnPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
 
+  /* Leaderboard + nickname modal styles */
+  #screen-nickname, #screen-leaderboard {
+    position: absolute; inset: 0;
+    display: none; justify-content: center; align-items: center;
+    z-index: 60; pointer-events: auto;
+  }
+  #screen-nickname .backdrop, #screen-leaderboard .backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+  }
+  #screen-nickname .card {
+    position: relative; z-index: 1;
+    background: var(--bg-card-solid);
+    border-radius: var(--border-radius-lg);
+    padding: 32px 36px;
+    text-align: center;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    max-width: 380px; width: calc(100% - 32px);
+  }
+  #screen-nickname h2 {
+    font-family: var(--font-display);
+    font-size: 32px; color: var(--yellow);
+    text-shadow: var(--text-shadow);
+    margin: 0 0 8px 0;
+  }
+  #screen-nickname .subtitle {
+    font-family: var(--font-body); font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px; line-height: 1.4;
+  }
+  #screen-nickname input#name-input {
+    width: 100%; box-sizing: border-box;
+    background: rgba(0,0,0,0.4); border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 12px; padding: 12px 16px;
+    font-family: var(--font-display); font-size: 22px;
+    color: white; text-align: center; letter-spacing: 1px;
+    outline: none; transition: border-color 0.15s;
+  }
+  #screen-nickname input#name-input:focus { border-color: var(--yellow); }
+  #screen-nickname .hint {
+    min-height: 20px;
+    font-family: var(--font-body); font-size: 12px;
+    color: var(--text-secondary);
+    margin: 8px 0 16px 0;
+  }
+  #screen-nickname .hint.error { color: var(--red); }
+  #screen-nickname .hint.ok { color: var(--green); }
+
+  #screen-leaderboard .panel {
+    position: relative; z-index: 1;
+    background: var(--bg-card-solid);
+    border-radius: var(--border-radius-lg);
+    padding: 24px 28px 28px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+    width: min(500px, calc(100% - 32px));
+    max-height: 80vh; display: flex; flex-direction: column;
+  }
+  #screen-leaderboard .header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  #screen-leaderboard h2 {
+    font-family: var(--font-display); font-size: 32px;
+    color: var(--yellow); text-shadow: var(--text-shadow);
+    margin: 0;
+  }
+  #screen-leaderboard .close-btn {
+    background: rgba(255,255,255,0.15); border: none;
+    color: white; font-size: 20px;
+    width: 36px; height: 36px; border-radius: 50%;
+    cursor: pointer;
+  }
+  #screen-leaderboard .tabs {
+    display: flex; gap: 4px; margin-bottom: 12px;
+  }
+  #screen-leaderboard .tab {
+    flex: 1; padding: 8px 4px;
+    background: rgba(0,0,0,0.3); border: none;
+    color: var(--text-secondary);
+    font-family: var(--font-display); font-size: 14px;
+    letter-spacing: 1px;
+    cursor: pointer; border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+  }
+  #screen-leaderboard .tab.active {
+    background: var(--yellow); color: #1a1a2e;
+  }
+  #screen-leaderboard .list {
+    flex: 1; overflow-y: auto;
+    background: rgba(0,0,0,0.3);
+    border-radius: 12px;
+    min-height: 200px;
+    padding: 4px;
+  }
+  #screen-leaderboard .row {
+    display: flex; align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-family: var(--font-body); color: white;
+  }
+  #screen-leaderboard .row:last-child { border-bottom: none; }
+  #screen-leaderboard .row.me {
+    background: rgba(255,215,0,0.15);
+    border-radius: 8px;
+  }
+  #screen-leaderboard .rank {
+    font-family: var(--font-display); font-size: 18px;
+    color: var(--yellow); width: 36px; flex-shrink: 0;
+  }
+  #screen-leaderboard .name {
+    flex: 1; font-size: 15px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #screen-leaderboard .score {
+    font-family: var(--font-display); font-size: 18px;
+    color: white; text-align: right;
+  }
+  #screen-leaderboard .dist {
+    font-size: 11px; color: var(--text-secondary);
+    margin-left: 8px;
+  }
+  #screen-leaderboard .empty, #screen-leaderboard .loading {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+    font-family: var(--font-body); font-size: 14px;
+  }
+  #title-racer-name {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 14px;
+    text-shadow: var(--text-shadow);
+  }
+  #title-racer-name span { color: var(--yellow); }
+
 
   @media (max-width: 480px) {
     #screen-title h1:first-child { font-size: 48px !important; }
@@ -205,13 +341,15 @@
     <h1 style="font-family:var(--font-display);font-size:88px;color:var(--red);text-shadow:var(--text-shadow-heavy);margin:0;margin-top:-8px;">RACE!</h1>
   </div>
   <button id="tap-to-start" class="game-btn large pulse" onclick="startFromTitle()">TAP TO START</button>
-  <div style="display:flex;gap:32px;margin-top:40px;">
+  <button class="game-btn secondary" style="margin-top:14px;" onclick="openLeaderboard()">LEADERBOARD</button>
+  <div style="display:flex;gap:32px;margin-top:32px;">
     <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
       <span style="font-size:24px;">&#127942;</span>
       <span style="font-family:var(--font-body);font-size:12px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:2px;">High Score</span>
       <span id="title-highscore" style="font-family:var(--font-display);font-size:28px;color:white;text-shadow:var(--text-shadow);">0</span>
     </div>
   </div>
+  <div id="title-racer-name" style="display:none;">Racing as <span id="title-racer-name-value">—</span></div>
 </div>
 
 <div id="hud" style="display:none;">
@@ -267,7 +405,38 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:24px;">
       <button class="game-btn large pulse" onclick="restartGame()">RACE AGAIN</button>
+      <button class="game-btn secondary" onclick="openLeaderboard()">LEADERBOARD</button>
       <button class="game-btn secondary" onclick="showGarage()">GARAGE</button>
+    </div>
+  </div>
+</div>
+
+<div id="screen-nickname">
+  <div class="backdrop"></div>
+  <div class="card">
+    <h2>CHOOSE YOUR RACER NAME</h2>
+    <div class="subtitle">Pick a name (2&ndash;16 characters). Letters, numbers, spaces, dashes, underscores. <strong>Locked once confirmed.</strong></div>
+    <input id="name-input" type="text" maxlength="16" autocomplete="off" spellcheck="false" placeholder="e.g. SpeedyPete" />
+    <div class="hint" id="name-hint">&nbsp;</div>
+    <button class="game-btn large" id="name-confirm-btn" onclick="confirmNickname()" disabled>CONFIRM</button>
+  </div>
+</div>
+
+<div id="screen-leaderboard">
+  <div class="backdrop" onclick="closeLeaderboard()"></div>
+  <div class="panel">
+    <div class="header">
+      <h2>LEADERBOARD</h2>
+      <button class="close-btn" onclick="closeLeaderboard()">&times;</button>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="global" onclick="switchLeaderboardTab('global')">GLOBAL</button>
+      <button class="tab" data-tab="daily" onclick="switchLeaderboardTab('daily')">DAILY</button>
+      <button class="tab" data-tab="weekly" onclick="switchLeaderboardTab('weekly')">WEEKLY</button>
+      <button class="tab" data-tab="mine" onclick="switchLeaderboardTab('mine')">MY BEST</button>
+    </div>
+    <div class="list" id="leaderboard-list">
+      <div class="loading">Loading...</div>
     </div>
   </div>
 </div>
@@ -305,6 +474,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script>
 (function() {
   // ===================== DEVICE TIER =====================
@@ -334,7 +506,8 @@
     pothole: new THREE.Vector3(1.0, 0.05, 1.0),
     tire_stack: new THREE.Vector3(0.7, 1.0, 0.7),
     barrier: new THREE.Vector3(1.5, 0.9, 0.3),
-    trash_can: new THREE.Vector3(0.5, 0.7, 0.5)
+    trash_can: new THREE.Vector3(0.5, 0.7, 0.5),
+    boostTube: new THREE.Vector3(1.2, 1.6, 0.5)
   };
   const OBSTACLE_COLORS = {
     barrel: 0xFF6633,
@@ -1431,6 +1604,27 @@
     }, 10);
   }
 
+  function spawnBoostTubeForPattern(pattern, z) {
+    if (Math.random() >= 0.05) return;
+    var clearLanes = [];
+    for (var lane = 0; lane < 3; lane++) {
+      if (!pattern[lane]) clearLanes.push(lane);
+    }
+    if (clearLanes.length === 0) return;
+    var chosen = clearLanes[Math.floor(Math.random() * clearLanes.length)];
+    var obs = obstaclePool.get();
+    var hb = OBSTACLE_HITBOXES.boostTube;
+    buildBoostTubeVisual(obs);
+    obs.rotation.set(0, 0, 0);
+    obs.userData.type = 'boostTube';
+    obs.userData.hitbox = hb;
+    obs.userData.nearMissCounted = false;
+    obs.userData.tubeUsed = false;
+    obs.position.set(LANES[chosen], 0, z);
+    obs.visible = true;
+    activeObstacles.push(obs);
+  }
+
   function spawnSpecialForPattern(pattern, z) {
     if (Math.random() < 0.05) {
       var clearLanes = [];
@@ -1673,6 +1867,12 @@
       jumpDuration = 1000;
       jumpHeight = 2.0;
     }
+  }
+
+  function handleBoostTubeHit() {
+    isBoosted = true;
+    boostEndTime = performance.now() + BOOST_DURATION;
+    showFloatingText('BOOST!', new THREE.Vector3(playerX, 1.5, 0), '#44FFFF');
   }
 
   function updateJump(now) {
@@ -2051,6 +2251,306 @@
     return parseInt(localStorage.getItem('soapbox:highscore') || '0');
   }
 
+  // ===================== LEADERBOARD (Firebase) =====================
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCyxemT4hUdtdilQe2Zu_cc17YOzp1UtiE",
+    authDomain: "soapbox-racing.firebaseapp.com",
+    projectId: "soapbox-racing",
+    storageBucket: "soapbox-racing.firebasestorage.app",
+    messagingSenderId: "316712243347",
+    appId: "1:316712243347:web:7d6feb36e099e2dc96bd66",
+    measurementId: "G-SJHY1K3NKL"
+  };
+
+  var fbReady = false;
+  var fbAuth = null;
+  var fbDb = null;
+  var playerUid = null;
+  var playerName = null;
+  var leaderboardCache = {}; // tab -> { ts, rows }
+  var LEADERBOARD_CACHE_TTL = 60000;
+  var currentLbTab = 'global';
+
+  function initFirebase() {
+    if (typeof firebase === 'undefined') {
+      console.warn('[Leaderboard] Firebase SDK not loaded — leaderboard disabled');
+      return;
+    }
+    if (!FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey.indexOf('...') !== -1) {
+      console.warn('[Leaderboard] Firebase config missing — leaderboard disabled');
+      return;
+    }
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+      fbAuth = firebase.auth();
+      fbDb = firebase.firestore();
+      fbReady = true;
+      fbAuth.signInAnonymously().then(function(cred) {
+        playerUid = cred.user.uid;
+        localStorage.setItem('soapbox:player_uid', playerUid);
+        loadPlayerProfile();
+      }).catch(function(err) {
+        console.warn('[Leaderboard] Anonymous sign-in failed:', err);
+        fbReady = false;
+      });
+    } catch (e) {
+      console.warn('[Leaderboard] Firebase init failed:', e);
+      fbReady = false;
+    }
+  }
+
+  function loadPlayerProfile() {
+    var cached = localStorage.getItem('soapbox:player_name');
+    if (cached) {
+      playerName = cached;
+      updateTitleRacerName();
+    }
+    fbDb.collection('players').doc(playerUid).get().then(function(doc) {
+      if (doc.exists) {
+        playerName = doc.data().name;
+        localStorage.setItem('soapbox:player_name', playerName);
+        updateTitleRacerName();
+      } else {
+        showNicknameModal();
+      }
+    }).catch(function(err) {
+      console.warn('[Leaderboard] Failed to load player profile:', err);
+    });
+  }
+
+  function updateTitleRacerName() {
+    var el = document.getElementById('title-racer-name');
+    var val = document.getElementById('title-racer-name-value');
+    if (!el || !val) return;
+    if (playerName) {
+      val.textContent = playerName;
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  // Profanity blocklist (small inline list — internal game)
+  var PROFANITY_BLOCKLIST = [
+    'fuck','shit','bitch','asshole','dick','cock','cunt','pussy','slut','whore',
+    'bastard','piss','damn','hell','crap','tit','tits','ass','arse','wank',
+    'twat','prick','bollock','bollocks','nigger','nigga','faggot','fag','retard',
+    'retarded','spaz','mong','tranny','dyke','homo','rape','rapist','pedo',
+    'pedophile','nazi','hitler','kike','chink','gook','spic','wetback','beaner',
+    'jap','kkk','klan','sex','porn','xxx','penis','vagina','boob','boobs','nipple',
+    'orgasm','cum','jizz','semen','anal','butt','arsehole','douche','douchebag',
+    'motherfucker','mofo','fucker','fucking','fucked','shitty','shithead','dipshit',
+    'dumbass','jackass','smartass','badass','kissass','suck','sucks','sucker',
+    'idiot','moron','stupid','dumb','imbecile','loser','noob','newb','scrub',
+    'gay','lesbian','queer','tranny','shemale','hooker','escort'
+  ];
+
+  function normalizeForProfanity(s) {
+    return s.toLowerCase()
+      .replace(/@/g, 'a')
+      .replace(/4/g, 'a')
+      .replace(/1/g, 'i')
+      .replace(/!/g, 'i')
+      .replace(/0/g, 'o')
+      .replace(/3/g, 'e')
+      .replace(/\$/g, 's')
+      .replace(/5/g, 's')
+      .replace(/7/g, 't')
+      .replace(/[^a-z]/g, '');
+  }
+
+  function validateNickname(raw) {
+    var trimmed = (raw || '').trim();
+    if (trimmed.length === 0) return { ok: false, msg: 'Enter a name to continue' };
+    if (trimmed.length < 2) return { ok: false, msg: 'Name too short (min 2)' };
+    if (trimmed.length > 16) return { ok: false, msg: 'Name too long (max 16)' };
+    if (!/^[A-Za-z0-9 _\-]+$/.test(trimmed)) {
+      return { ok: false, msg: 'Only letters, numbers, spaces, _ and -' };
+    }
+    var norm = normalizeForProfanity(trimmed);
+    for (var i = 0; i < PROFANITY_BLOCKLIST.length; i++) {
+      if (norm.indexOf(PROFANITY_BLOCKLIST[i]) !== -1) {
+        return { ok: false, msg: 'Please choose a different name' };
+      }
+    }
+    return { ok: true, msg: 'Looks good!', clean: trimmed };
+  }
+
+  function showNicknameModal() {
+    var modal = document.getElementById('screen-nickname');
+    var input = document.getElementById('name-input');
+    var hint = document.getElementById('name-hint');
+    var btn = document.getElementById('name-confirm-btn');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    input.value = '';
+    hint.textContent = '\u00A0';
+    hint.className = 'hint';
+    btn.disabled = true;
+    setTimeout(function() { input.focus(); }, 100);
+    input.oninput = function() {
+      var res = validateNickname(input.value);
+      if (input.value.trim().length === 0) {
+        hint.textContent = '\u00A0';
+        hint.className = 'hint';
+        btn.disabled = true;
+      } else if (res.ok) {
+        hint.textContent = res.msg;
+        hint.className = 'hint ok';
+        btn.disabled = false;
+      } else {
+        hint.textContent = res.msg;
+        hint.className = 'hint error';
+        btn.disabled = true;
+      }
+    };
+    input.onkeydown = function(e) {
+      if (e.key === 'Enter' && !btn.disabled) confirmNickname();
+    };
+  }
+
+  window.confirmNickname = function() {
+    var input = document.getElementById('name-input');
+    var hint = document.getElementById('name-hint');
+    var btn = document.getElementById('name-confirm-btn');
+    var res = validateNickname(input.value);
+    if (!res.ok) {
+      hint.textContent = res.msg;
+      hint.className = 'hint error';
+      return;
+    }
+    btn.disabled = true;
+    hint.textContent = 'Saving...';
+    hint.className = 'hint';
+    fbDb.collection('players').doc(playerUid).set({
+      name: res.clean,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      playerName = res.clean;
+      localStorage.setItem('soapbox:player_name', playerName);
+      document.getElementById('screen-nickname').style.display = 'none';
+      updateTitleRacerName();
+    }).catch(function(err) {
+      console.warn('[Leaderboard] Failed to save player name:', err);
+      hint.textContent = 'Save failed — try again';
+      hint.className = 'hint error';
+      btn.disabled = false;
+    });
+  };
+
+  function submitScore(finalScore, finalDistance, finalNearMisses) {
+    if (!fbReady || !playerUid || !playerName) return;
+    fbDb.collection('scores').add({
+      uid: playerUid,
+      name: playerName,
+      score: finalScore,
+      distance: finalDistance,
+      nearMisses: finalNearMisses,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function() {
+      // Invalidate cache so next leaderboard open shows the new score
+      leaderboardCache = {};
+    }).catch(function(err) {
+      console.warn('[Leaderboard] Score submit failed:', err);
+    });
+  }
+
+  function utcMidnightToday() {
+    var d = new Date();
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  }
+  function utcMidnightWeekStart() {
+    var d = new Date();
+    var day = d.getUTCDay(); // 0=Sun
+    var daysSinceMonday = (day + 6) % 7;
+    var monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - daysSinceMonday));
+    return monday;
+  }
+
+  window.openLeaderboard = function() {
+    var modal = document.getElementById('screen-leaderboard');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    switchLeaderboardTab(currentLbTab);
+  };
+
+  window.closeLeaderboard = function() {
+    var modal = document.getElementById('screen-leaderboard');
+    if (modal) modal.style.display = 'none';
+  };
+
+  window.switchLeaderboardTab = function(tab) {
+    currentLbTab = tab;
+    var tabs = document.querySelectorAll('#screen-leaderboard .tab');
+    for (var i = 0; i < tabs.length; i++) {
+      if (tabs[i].dataset.tab === tab) tabs[i].classList.add('active');
+      else tabs[i].classList.remove('active');
+    }
+    var list = document.getElementById('leaderboard-list');
+    var cached = leaderboardCache[tab];
+    if (cached && (Date.now() - cached.ts < LEADERBOARD_CACHE_TTL)) {
+      renderLeaderboardRows(cached.rows);
+      return;
+    }
+    if (!fbReady) {
+      list.innerHTML = '<div class="empty">Leaderboard unavailable<br><small>Firebase not configured</small></div>';
+      return;
+    }
+    list.innerHTML = '<div class="loading">Loading...</div>';
+    var query;
+    if (tab === 'global') {
+      query = fbDb.collection('scores').orderBy('score', 'desc').limit(50);
+    } else if (tab === 'daily') {
+      var since = firebase.firestore.Timestamp.fromDate(utcMidnightToday());
+      query = fbDb.collection('scores').where('createdAt', '>=', since).orderBy('createdAt', 'desc').orderBy('score', 'desc').limit(50);
+    } else if (tab === 'weekly') {
+      var since2 = firebase.firestore.Timestamp.fromDate(utcMidnightWeekStart());
+      query = fbDb.collection('scores').where('createdAt', '>=', since2).orderBy('createdAt', 'desc').orderBy('score', 'desc').limit(50);
+    } else if (tab === 'mine') {
+      query = fbDb.collection('scores').where('uid', '==', playerUid).orderBy('score', 'desc').limit(20);
+    }
+    query.get().then(function(snap) {
+      var rows = [];
+      snap.forEach(function(doc) { rows.push(doc.data()); });
+      // Daily/Weekly are fetched ordered by createdAt for the index — re-sort by score client-side
+      if (tab === 'daily' || tab === 'weekly') {
+        rows.sort(function(a, b) { return (b.score || 0) - (a.score || 0); });
+        rows = rows.slice(0, 50);
+      }
+      leaderboardCache[tab] = { ts: Date.now(), rows: rows };
+      renderLeaderboardRows(rows);
+    }).catch(function(err) {
+      console.warn('[Leaderboard] Query failed:', err);
+      list.innerHTML = '<div class="empty">Failed to load<br><small>' + (err.message || 'Unknown error') + '</small></div>';
+    });
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+
+  function renderLeaderboardRows(rows) {
+    var list = document.getElementById('leaderboard-list');
+    if (!rows || rows.length === 0) {
+      list.innerHTML = '<div class="empty">No scores yet &mdash; be the first!</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var isMe = (r.uid === playerUid);
+      html += '<div class="row' + (isMe ? ' me' : '') + '">'
+        + '<div class="rank">#' + (i + 1) + '</div>'
+        + '<div class="name">' + escapeHtml(r.name || '???') + '</div>'
+        + '<div class="score">' + (r.score || 0).toLocaleString()
+        + '<span class="dist">' + (r.distance || 0) + 'm</span>'
+        + '</div></div>';
+    }
+    list.innerHTML = html;
+  }
+
   // ===================== HUD SPEED =====================
   function updateHUDSpeed() {
     var maxSpeed = SPEED_TABLE[2000] * BOOST_MULTIPLIER;
@@ -2075,6 +2575,19 @@
 
   // Shared helper: apply GLB model or fallback box to an obstacle
   function applyObstacleModel(obs, type, hb) {
+    // If the obs was previously built as a custom multi-mesh type (e.g. boostTube),
+    // its stale children would confuse the fallback path — wipe them so we rebuild cleanly.
+    if (obs.userData.type === 'boostTube') {
+      while (obs.children.length) obs.remove(obs.children[0]);
+      var freshMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(hb.x, hb.y, hb.z),
+        createToonMaterial(OBSTACLE_COLORS[type] || 0xFF6633)
+      );
+      freshMesh.position.y = hb.y / 2;
+      freshMesh.castShadow = true;
+      obs.add(freshMesh);
+      addOutline(obs, 0.025);
+    }
     var obsGlb = GLB_ASSETS.obstacles && GLB_ASSETS.obstacles[type];
     var glbCached = obsGlb && glbCache[obsGlb.file];
     if (glbCached) {
@@ -2101,6 +2614,41 @@
         mainMesh.scale.set(1, 1, 1);
       }
     }
+  }
+
+  function buildBoostTubeVisual(obs) {
+    while (obs.children.length) obs.remove(obs.children[0]);
+
+    var tubeGeo = new THREE.CylinderGeometry(0.95, 0.95, 3.5, 16, 1, true);
+    var tubeMat = createToonMaterial(0x9E9C96);
+    tubeMat.side = THREE.DoubleSide;
+    var tube = new THREE.Mesh(tubeGeo, tubeMat);
+    tube.rotation.x = Math.PI / 2;
+    tube.position.y = 1.0;
+    tube.castShadow = false;
+    tube.receiveShadow = false;
+    obs.add(tube);
+
+    var ringMat = createToonMaterial(0x3E3D39);
+    var entranceRing = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.09, 8, 20), ringMat);
+    entranceRing.position.set(0, 1.0, -1.7);
+    entranceRing.castShadow = false;
+    obs.add(entranceRing);
+
+    var exitRing = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.09, 8, 20), ringMat);
+    exitRing.position.set(0, 1.0, 1.7);
+    exitRing.castShadow = false;
+    obs.add(exitRing);
+
+    var innerRingMat = createToonMaterial(0x6A6860);
+    for (var ri = 0; ri < 3; ri++) {
+      var inner = new THREE.Mesh(new THREE.TorusGeometry(0.88, 0.05, 6, 16), innerRingMat);
+      inner.position.set(0, 1.0, -0.85 + ri * 0.85);
+      inner.castShadow = false;
+      obs.add(inner);
+    }
+
+    addOutline(obs, 0.025);
   }
 
   function spawnObstacleRow(pattern, z) {
@@ -2171,6 +2719,7 @@
       }
     }
     spawnSpecialForPattern(pattern, z);
+    spawnBoostTubeForPattern(pattern, z);
     difficultyManager.onRowSpawned();
   }
 
@@ -2284,6 +2833,13 @@
       _obsCenter.set(_worldPos.x, _worldPos.y + hb.y / 2, _worldPos.z);
       obsBox.setFromCenterAndSize(_obsCenter, hb);
       if (playerBox.intersectsBox(obsBox)) {
+        if (obs.userData.type === 'boostTube') {
+          if (!obs.userData.tubeUsed) {
+            obs.userData.tubeUsed = true;
+            handleBoostTubeHit();
+          }
+          return;
+        }
         if (obs.userData.type === 'ramp') {
           if (!obs.userData.rampUsed) {
             obs.userData.rampUsed = true;
@@ -2453,6 +3009,7 @@
       goNearMisses.textContent = nearMisses;
       goStyle.textContent = 'x' + styleMultiplier.toFixed(2);
       var isNew = saveHighScore(finalScore);
+      submitScore(finalScore, Math.floor(distance), nearMisses);
       goHighscore.textContent = getHighScore();
       if (isNew) {
         goHighscoreBadge.style.display = 'block';
@@ -2906,6 +3463,11 @@
 
   // ===================== INPUT =====================
   window.addEventListener('keydown', function(e) {
+    // Don't hijack keys when the user is typing in a text field
+    var ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) {
+      return;
+    }
     if (e.key === 'Escape' || e.key === 'p') {
       togglePause();
       e.preventDefault();
@@ -3110,6 +3672,7 @@
     buildPlayer();
     initObstacles();
     initCollectibles();
+    initFirebase();
     scrollSpeed = getTargetSpeed(0) * 0.8;
     lastTime = performance.now();
 
@@ -3122,6 +3685,7 @@
 
     // Populate title screen stats
     document.getElementById('title-highscore').textContent = getHighScore().toLocaleString();
+    updateTitleRacerName();
 
     // Wire up title button (backup for onclick)
     document.getElementById('tap-to-start').addEventListener('click', function(e) {
