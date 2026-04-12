@@ -592,7 +592,9 @@
     shoe:    { w:0.7, h:0.6, d:1.3 },
     box:     { w:0.6, h:0.5, d:1.0 },
     banana:  { w:0.7, h:0.6, d:1.8 },
-    couch:   { w:0.7, h:0.6, d:1.1 }
+    couch:   { w:0.7, h:0.6, d:1.1 },
+    log:     { w:0.7, h:0.5, d:1.5 },
+    longship:{ w:0.9, h:0.7, d:1.8 }
   };
   var WHEEL_RADIUS = {
     chunky: 0.18, skinny: 0.22, monster: 0.28, wagon: 0.20, roller: 0.10
@@ -603,7 +605,9 @@
     shoe:    [{x:-0.38,z:-0.10},{x:0.38,z:-0.10},{x:-0.38,z:0.40},{x:0.38,z:0.40}],
     box:     [{x:-0.32,z:-0.22},{x:0.32,z:-0.22},{x:-0.32,z:0.22},{x:0.32,z:0.22}],
     banana:  [{x:-0.30,z:-0.55},{x:0.30,z:-0.55},{x:-0.30,z:0.55},{x:0.30,z:0.55}],
-    couch:   [{x:-0.33,z:-0.25},{x:0.33,z:-0.25},{x:-0.33,z:0.25},{x:0.33,z:0.25}]
+    couch:   [{x:-0.33,z:-0.25},{x:0.33,z:-0.25},{x:-0.33,z:0.25},{x:0.33,z:0.25}],
+    log:     [{x:-0.32,z:-0.45},{x:0.32,z:-0.45},{x:-0.32,z:0.45},{x:0.32,z:0.45}],
+    longship:[{x:-0.40,z:-0.55},{x:0.40,z:-0.55},{x:-0.40,z:0.55},{x:0.40,z:0.55}]
   };
   var CHASSIS_DECOS = {
     bathtub: { top:{x:0,y:0.55,z:0}, side:{x:0.62,y:0.25,z:0}, front:{x:0,y:0.25,z:-0.38}, back:{x:0,y:0.25,z:0.38} },
@@ -611,12 +615,15 @@
     shoe:    { top:{x:0,y:0.65,z:0}, side:{x:0.38,y:0.3,z:0}, front:{x:0,y:0.3,z:-0.38}, back:{x:0,y:0.3,z:0.38} },
     box:     { top:{x:0,y:0.55,z:0}, side:{x:0.52,y:0.25,z:0}, front:{x:0,y:0.25,z:-0.33}, back:{x:0,y:0.25,z:0.33} },
     banana:  { top:{x:0,y:0.55,z:0}, side:{x:0.27,y:0.25,z:0}, front:{x:0,y:0.25,z:-0.45}, back:{x:0,y:0.25,z:0.45} },
-    couch:   { top:{x:0,y:0.65,z:0}, side:{x:0.38,y:0.3,z:0}, front:{x:0,y:0.3,z:-0.38}, back:{x:0,y:0.3,z:0.38} }
+    couch:   { top:{x:0,y:0.65,z:0}, side:{x:0.38,y:0.3,z:0}, front:{x:0,y:0.3,z:-0.38}, back:{x:0,y:0.3,z:0.38} },
+    log:     { top:{x:0,y:0.55,z:0}, side:{x:0.38,y:0.25,z:0}, front:{x:0,y:0.25,z:-0.50}, back:{x:0,y:0.25,z:0.50} },
+    longship:{ top:{x:0,y:0.78,z:0}, side:{x:0.50,y:0.35,z:0}, front:{x:0,y:0.35,z:-0.60}, back:{x:0,y:0.35,z:0.60} }
   };
 
   var CHASSIS_STATS = {
     bathtub:{spd:3,hdl:3,sty:3}, rocket:{spd:5,hdl:2,sty:4}, shoe:{spd:2,hdl:4,sty:5},
-    box:{spd:3,hdl:4,sty:1}, banana:{spd:4,hdl:2,sty:5}, couch:{spd:2,hdl:3,sty:4}
+    box:{spd:3,hdl:4,sty:1}, banana:{spd:4,hdl:2,sty:5}, couch:{spd:2,hdl:3,sty:4},
+    log:{spd:3,hdl:2,sty:4}, longship:{spd:4,hdl:2,sty:5}
   };
   var WHEEL_STATS = {
     chunky:{spd:0,hdl:0,sty:0}, skinny:{spd:1,hdl:1,sty:0}, monster:{spd:-1,hdl:-1,sty:1},
@@ -1002,6 +1009,59 @@
     return group;
   }
 
+  // ===================== HAY BALE FENCING (decorative) =====================
+  // Lazy-cached toonified hay-bale source. Cloned per bale; clones share materials.
+  var hayBaleFenceSource = null;
+  var hayBaleFenceTargetZ = 0; // bale length along Z after rotation+scale, for spacing
+
+  function getHayBaleFenceSource() {
+    if (hayBaleFenceSource) return hayBaleFenceSource;
+    var cached = glbCache['hay-bale.glb'];
+    if (!cached) return null;
+    var src = cached.clone();
+    // Mark all meshes as cheap before toonifying so addOutline + shadows are skipped
+    src.traverse(function(c) {
+      if (c.isMesh) {
+        c.userData.noOutline = true;
+        c.castShadow = false;
+        c.receiveShadow = false;
+      }
+    });
+    toonifyModel(src, null, true); // preserve textures, apply toon shading
+    // Rotate so the long axis runs along Z (parallel to road) instead of across it
+    src.rotation.y = Math.PI / 2;
+    // Compute desired scale: target a narrower fencing footprint (~1.2m along road, slimmer profile)
+    src.updateMatrixWorld(true);
+    var bbox = new THREE.Box3().setFromObject(src);
+    var size = bbox.getSize(new THREE.Vector3());
+    var targetZ = 1.3;
+    var scale = targetZ / Math.max(size.z, 0.01);
+    // Make the cross-section a bit smaller so bales feel narrow against the road
+    src.scale.setScalar(scale * 0.7);
+    hayBaleFenceTargetZ = targetZ * 0.7;
+    return (hayBaleFenceSource = src);
+  }
+
+  function populateSegmentHayBales(group) {
+    if (group.userData.hayBalesPopulated) return;
+    var src = getHayBaleFenceSource();
+    if (!src) return; // GLB not loaded yet — try again next frame
+    group.userData.hayBalesPopulated = true;
+    var step = IS_LOW_END ? hayBaleFenceTargetZ * 1.6 : hayBaleFenceTargetZ * 1.05;
+    var halfLen = SEGMENT_LENGTH / 2;
+    for (var hz = -halfLen + step / 2; hz <= halfLen - step / 2 + 0.001; hz += step) {
+      for (var hs = 0; hs < 2; hs++) {
+        var haleX = (hs === 0 ? -1 : 1) * (ROAD_WIDTH / 2 + 0.5);
+        var bale = src.clone();
+        // Recompute Y so the bale sits on top of the sidewalk plane (y=0.08)
+        var bbox = new THREE.Box3().setFromObject(bale);
+        bale.position.set(haleX, 0.08 - bbox.min.y, hz);
+        bale.rotation.y = src.rotation.y + (Math.random() - 0.5) * 0.15;
+        group.add(bale);
+      }
+    }
+  }
+
   function createSegment() {
     var group = new THREE.Group();
 
@@ -1015,7 +1075,7 @@
 
     // Curbs
     var curbGeo = new THREE.BoxGeometry(0.3, 0.1, SEGMENT_LENGTH);
-    var curbMat = createToonMaterial(0xFF2255);
+    var curbMat = createToonMaterial(0x888888);
     var leftCurb = new THREE.Mesh(curbGeo, curbMat);
     leftCurb.position.set(-(ROAD_WIDTH / 2 + 0.15), 0.05, 0);
     group.add(leftCurb);
@@ -1037,6 +1097,12 @@
     rightSW.position.set(ROAD_WIDTH / 2 + 1.75, 0.08, 0);
     rightSW.receiveShadow = true;
     group.add(rightSW);
+
+    // Hay bale fencing along the sides (Red Bull Soapbox style — decorative only, no collision)
+    // Populated lazily once hay-bale.glb is in glbCache. updateTrack() retries on segments
+    // that didn't have the GLB available at creation time.
+    group.userData.hayBalesPopulated = false;
+    populateSegmentHayBales(group);
 
     // Buildings are NOT in segment group — they're spawned separately in scene root
     // so they stay vertical while the road tilts downhill
@@ -1072,6 +1138,10 @@
     // Move all segments toward camera
     for (var i = 0; i < segmentPool.length; i++) {
       segmentPool[i].position.z += scrollSpeed * dt;
+      // Retry hay bale population for segments that didn't have the GLB cached at creation
+      if (!segmentPool[i].userData.hayBalesPopulated) {
+        populateSegmentHayBales(segmentPool[i]);
+      }
     }
     // Recycle segments that passed behind camera
     for (var i = 0; i < segmentPool.length; i++) {
@@ -1157,7 +1227,9 @@
       rocket:  { file: 'Meshy_AI_Red_Stripe_Rocket_0330160432_texture.glb', rotY: Math.PI },
       couch:   { file: 'Meshy_AI_couch_car_0330162428_texture.glb', rotY: Math.PI },
       shoe:    { file: 'Meshy_AI_shoe_car_0330163356_texture.glb', rotY: Math.PI },
-      box:     { file: 'box-car-original.glb', rotY: Math.PI }
+      box:     { file: 'box-car-original.glb', rotY: Math.PI },
+      log:     { file: 'tree-log.glb', rotY: Math.PI },
+      longship:{ file: 'viking-boat.glb', rotY: Math.PI }
     },
     driver: {
       default: { file: 'trellis_seed42_1775593551.glb', rotY: Math.PI }
@@ -1250,20 +1322,66 @@
       var glbFile = glbAsset.file || glbAsset;
       var extraRotY = glbAsset.rotY || 0;
       loadGLB(glbFile).then(function(model) {
-        if (chassisType === 'box') {
-          // box-car GLB (from trimesh) has no NORMAL attribute, so lit shaders render black.
-          // Use unlit MeshBasicMaterial — it doesn't need normals and shows the texture as-is.
+        if (chassisType === 'box' || chassisType === 'log' || chassisType === 'longship') {
+          // Use unlit MeshBasicMaterial — shows the texture as-is at full brightness.
+          // Required for box (no NORMAL attribute); used for log + longship to keep their
+          // textures bright. DoubleSide handles inward-facing Meshy normals. Texture is
+          // pre-processed through a gamma curve to lift dark pixels (Meshy bakes AO into
+          // the diffuse map, leaving one side of the model unnaturally dark).
+          var brightTexCache = new Map();
+          var brightenTexture = function(srcTex) {
+            if (!srcTex || !srcTex.image) return srcTex;
+            if (brightTexCache.has(srcTex)) return brightTexCache.get(srcTex);
+            var img = srcTex.image;
+            var w = img.width || img.naturalWidth || 0;
+            var h = img.height || img.naturalHeight || 0;
+            if (!w || !h) return srcTex;
+            try {
+              var canvas = document.createElement('canvas');
+              canvas.width = w; canvas.height = h;
+              var ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              var imgData = ctx.getImageData(0, 0, w, h);
+              var d = imgData.data;
+              // Gamma curve: pow(n, 0.6) lifts darks significantly without washing out brights
+              var lut = new Uint8Array(256);
+              for (var li = 0; li < 256; li++) {
+                lut[li] = Math.min(255, Math.round(Math.pow(li / 255, 0.6) * 255));
+              }
+              for (var i = 0; i < d.length; i += 4) {
+                d[i]   = lut[d[i]];
+                d[i+1] = lut[d[i+1]];
+                d[i+2] = lut[d[i+2]];
+              }
+              ctx.putImageData(imgData, 0, 0);
+              var newTex = new THREE.CanvasTexture(canvas);
+              newTex.encoding = THREE.sRGBEncoding;
+              newTex.flipY = srcTex.flipY;
+              newTex.wrapS = srcTex.wrapS;
+              newTex.wrapT = srcTex.wrapT;
+              newTex.needsUpdate = true;
+              brightTexCache.set(srcTex, newTex);
+              return newTex;
+            } catch (e) {
+              console.warn('[chassis] brightenTexture failed:', e);
+              return srcTex;
+            }
+          };
+          var makeBasic = function(srcMat) {
+            var basicMat = new THREE.MeshBasicMaterial({
+              map: srcMat.map ? brightenTexture(srcMat.map) : null,
+              color: srcMat.map ? 0xffffff : (srcMat.color ? srcMat.color.clone() : new THREE.Color(0xcccccc)),
+              side: THREE.DoubleSide
+            });
+            return basicMat;
+          };
           model.traverse(function(c) {
             if (c.isMesh && c.material) {
-              var basicMat = new THREE.MeshBasicMaterial({
-                map: c.material.map || null,
-                color: c.material.map ? 0xffffff : (c.material.color || new THREE.Color(0xcccccc))
-              });
-              if (basicMat.map) {
-                basicMat.map.encoding = THREE.sRGBEncoding;
-                basicMat.map.needsUpdate = true;
+              if (Array.isArray(c.material)) {
+                c.material = c.material.map(makeBasic);
+              } else {
+                c.material = makeBasic(c.material);
               }
-              c.material = basicMat;
               c.castShadow = true;
               c.receiveShadow = true;
             }
@@ -1414,7 +1532,9 @@
         shoe:    { x: 0, y: cd.h * 0.4, z: 0.15 },
         banana:  { x: 0, y: cd.h * 0.6, z: 0.15 },
         couch:   { x: 0, y: cd.h * 0.2, z: 0 },
-        box:     { x: 0, y: cd.h * 0.4, z: 0.1 }
+        box:     { x: 0, y: cd.h * 0.4, z: 0.1 },
+        log:     { x: 0, y: cd.h * 0.6, z: 0.05 },
+        longship:{ x: 0, y: cd.h * 0.5, z: 0.15 }
       };
       var dOff = driverOffsets[vehicleData.chassis.type] || { x: 0, y: cd.h * 0.4, z: 0 };
       driverModel.position.set(dOff.x, dOff.y - dbox.min.y, dOff.z);
@@ -3237,7 +3357,7 @@
   var garageActiveTab = 'chassis';
 
   var GARAGE_CATALOG = {
-    chassis: ['bathtub','rocket','shoe','box','banana','couch'],
+    chassis: ['bathtub','rocket','shoe','box','banana','couch','log','longship'],
     wheels: ['chunky','skinny','monster','wagon','roller'],
     top: ['none','flag','antenna','propeller','crown','fin'],
     side: ['none','sticker','stripe','flame','number','lightning'],
