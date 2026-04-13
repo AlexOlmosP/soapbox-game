@@ -2045,6 +2045,26 @@
     return pick;
   }
 
+  // Helper: remove any active obstacles whose X position matches the given lanes.
+  // Used by ramp events to guarantee a clean runway so the player can reach the ramp.
+  // Ramps themselves (already spawned) are preserved — we only clear non-ramp obstacles.
+  function clearObstaclesInLanes(laneIndices) {
+    var tolerance = 0.3; // match any obstacle within 0.3m of a lane center
+    for (var i = activeObstacles.length - 1; i >= 0; i--) {
+      var obs = activeObstacles[i];
+      if (obs.userData.type === 'ramp' || obs.userData.type === 'boostTube') continue;
+      var ox = obs.position.x;
+      var matched = false;
+      for (var li = 0; li < laneIndices.length; li++) {
+        if (Math.abs(ox - LANES[laneIndices[li]]) < tolerance) { matched = true; break; }
+      }
+      if (matched) {
+        obstaclePool.returnToPool(obs);
+        activeObstacles.splice(i, 1);
+      }
+    }
+  }
+
   // ===================== EVENT MANAGER =====================
   var eventManager = {
     lastEventEnd: 0,
@@ -2076,6 +2096,9 @@
     startRampEvent: function() {
       var lane = Math.floor(Math.random() * 3);
       var others = [0,1,2].filter(function(l){return l!==lane;});
+      // Clear any existing obstacles in the ramp lane so the player has a clean
+      // runway to the ramp (they'd otherwise crash into stale spawns).
+      clearObstaclesInLanes([lane]);
       this.activeEvent = {
         rows: [
           { dist: 0, pattern: (function(){ var p=[false,false,false]; p[others[0]]=true; return p; })(), type: 'cone' },
@@ -2098,7 +2121,9 @@
     },
 
     startElevatedEvent: function() {
-      // All 3 lanes get ramps — player MUST jump (single row, then event ends)
+      // All 3 lanes get ramps — player MUST jump. Clear all lanes first so no
+      // pre-existing obstacle can block the runway.
+      clearObstaclesInLanes([0, 1, 2]);
       this.activeEvent = {
         rows: [{ dist: 0, allRamps: true }],
         currentRow: 0,
