@@ -695,11 +695,11 @@
 
   // ===================== RENDERER & SCENE =====================
   const renderer = new THREE.WebGLRenderer({
-    antialias: !IS_LOW_END,
+    antialias: false, // toon shading + outlines hide aliasing — save the fragment cost
     alpha: true,
     powerPreference: 'high-performance'
   });
-  renderer.setPixelRatio(IS_LOW_END ? 1 : Math.min(window.devicePixelRatio, 1.5));
+  renderer.setPixelRatio(IS_LOW_END ? 1 : Math.min(window.devicePixelRatio, 1.25));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = !IS_LOW_END;
   renderer.shadowMap.type = THREE.PCFShadowMap; // cheaper than PCFSoftShadowMap
@@ -735,6 +735,12 @@
   wallTexture.wrapT = THREE.RepeatWrapping;
   wallTexture.repeat.set(3, 2);
 
+  // Shared materials reused across every track segment — avoids re-creating
+  // ~30 identical material instances per game and lets WebGL batch draws.
+  var SHARED_ROAD_MAT = new THREE.MeshLambertMaterial({ map: roadTexture });
+  var SHARED_SW_MAT = new THREE.MeshLambertMaterial({ map: sidewalkTexture });
+  var SHARED_CURB_MAT = null; // assigned after createToonMaterial is defined below
+
   // ===================== TOON SHADING =====================
   function createGradientMap3() {
     const data = new Uint8Array([0,0,0, 140,140,140, 255,255,255]);
@@ -767,6 +773,11 @@
     });
   }
 
+  // One shared outline material for every outline mesh — same color, same params.
+  var SHARED_OUTLINE_MAT = new THREE.MeshBasicMaterial({
+    color: 0x222222,
+    side: THREE.BackSide
+  });
   function addOutline(object, thickness) {
     if (IS_LOW_END) return; // skip outlines on low-end — toon shading carries the look
     thickness = thickness !== undefined ? thickness : 0.04;
@@ -779,10 +790,7 @@
     for (var i = 0; i < children.length; i++) {
       var child = children[i];
       var outlineMesh = child.clone();
-      outlineMesh.material = new THREE.MeshBasicMaterial({
-        color: 0x222222,
-        side: THREE.BackSide
-      });
+      outlineMesh.material = SHARED_OUTLINE_MAT;
       outlineMesh.scale.multiplyScalar(1 + thickness);
       outlineMesh.castShadow = false;
       outlineMesh.receiveShadow = false;
@@ -831,7 +839,7 @@
   const sunLight = new THREE.DirectionalLight(0xFFFFFF, 1.1);
   sunLight.position.set(4, 10, 5);
   sunLight.castShadow = !IS_LOW_END;
-  sunLight.shadow.mapSize.set(IS_LOW_END ? 256 : 512, IS_LOW_END ? 256 : 512);
+  sunLight.shadow.mapSize.set(256, 256); // 256 is plenty for toon-shaded scene; 512 was wasteful
   sunLight.shadow.camera.near = 1;
   sunLight.shadow.camera.far = 40;
   sunLight.shadow.camera.left = -8;
@@ -839,15 +847,17 @@
   sunLight.shadow.camera.top = 15;
   sunLight.shadow.camera.bottom = -5;
   sunLight.shadow.bias = -0.001;
+  // Sun is static; don't re-render the shadow map every frame. We manually
+  // flag it dirty every few frames inside gameLoop so moving objects update.
+  sunLight.shadow.autoUpdate = false;
+  sunLight.shadow.needsUpdate = true; // initial render
   scene.add(sunLight);
   scene.add(sunLight.target);
 
-  const hemiLight = new THREE.HemisphereLight(0x55DDFF, 0xFF4488, 0.45);
+  // Hemisphere bumped slightly to compensate for the removed fill light.
+  const hemiLight = new THREE.HemisphereLight(0x55DDFF, 0xFF4488, 0.55);
   scene.add(hemiLight);
-
-  const fillLight = new THREE.DirectionalLight(0x66CCFF, 0.25);
-  fillLight.position.set(-3, 5, 2);
-  scene.add(fillLight);
+  // (removed: fillLight DirectionalLight — its cool tint is already covered by the hemisphere sky color)
 
   // ===================== TRACK =====================
   var segmentPool = [];
@@ -1009,17 +1019,22 @@
     return group;
   }
 
-  // ===================== HAY BALE FENCING (decorative) =====================
-  // Lazy-cached toonified hay-bale source. Cloned per bale; clones share materials.
-  var hayBaleFenceSource = null;
-  var hayBaleFenceTargetZ = 0; // bale length along Z after rotation+scale, for spacing
+  // ===================== HAY BALE FENCING (decorative, instanced) =====================
+  // Each segment fences both sides with ~22 hay bales. To keep drawcalls low we
+  // render them via THREE.InstancedMesh: the hay-bale GLB is flattened once into
+  // a list of {geometry, material} templates with all source-level transforms
+  // baked into the geometry, then one InstancedMesh per template is created per
+  // segment. This drops ~22 drawcalls/segment to N (N = mesh count inside GLB).
+  var hayBaleTemplates = null;     // [{geometry, material}] with baked transforms
+  var hayBaleFenceTargetZ = 0;     // length along Z after rotation+scale (for spacing)
+  var hayBaleBaseY = 0.43;         // Y where bale center sits so bottom touches sidewalk
 
-  function getHayBaleFenceSource() {
-    if (hayBaleFenceSource) return hayBaleFenceSource;
+  function buildHayBaleTemplates() {
+    if (hayBaleTemplates) return hayBaleTemplates;
     var cached = glbCache['hay-bale.glb'];
     if (!cached) return null;
+    // Build a transient toonified source with the target rotation + scale.
     var src = cached.clone();
-    // Mark all meshes as cheap before toonifying so addOutline + shadows are skipped
     src.traverse(function(c) {
       if (c.isMesh) {
         c.userData.noOutline = true;
@@ -1027,38 +1042,75 @@
         c.receiveShadow = false;
       }
     });
-    toonifyModel(src, null, true); // preserve textures, apply toon shading
-    // Rotate so the long axis runs along Z (parallel to road) instead of across it
+    toonifyModel(src, null, true);
     src.rotation.y = Math.PI / 2;
-    // Compute desired scale: target a narrower fencing footprint (~1.2m along road, slimmer profile)
     src.updateMatrixWorld(true);
     var bbox = new THREE.Box3().setFromObject(src);
     var size = bbox.getSize(new THREE.Vector3());
     var targetZ = 1.3;
     var scale = targetZ / Math.max(size.z, 0.01);
-    // Make the cross-section a bit smaller so bales feel narrow against the road
     src.scale.setScalar(scale * 0.7);
+    src.updateMatrixWorld(true);
     hayBaleFenceTargetZ = targetZ * 0.7;
-    return (hayBaleFenceSource = src);
+    // Flatten: bake each leaf mesh's world-relative-to-source transform into a
+    // cloned geometry. After this, every template's geometry sits at origin
+    // ready to be instanced — per-instance matrix is just position + jitter rot.
+    var templates = [];
+    var minY = Infinity;
+    src.traverse(function(leaf) {
+      if (!leaf.isMesh || !leaf.geometry) return;
+      var bakedGeom = leaf.geometry.clone();
+      bakedGeom.applyMatrix4(leaf.matrixWorld);
+      bakedGeom.computeBoundingBox();
+      if (bakedGeom.boundingBox.min.y < minY) minY = bakedGeom.boundingBox.min.y;
+      templates.push({ geometry: bakedGeom, material: leaf.material });
+    });
+    hayBaleBaseY = 0.08 - minY; // sit baked-bottom on sidewalk top (y=0.08)
+    hayBaleTemplates = templates;
+    return hayBaleTemplates;
   }
+
+  // Scratch objects to avoid per-bale allocations
+  var _haleMat4 = new THREE.Matrix4();
+  var _haleQuat = new THREE.Quaternion();
+  var _haleEuler = new THREE.Euler();
+  var _halePos = new THREE.Vector3();
+  var _haleScale = new THREE.Vector3(1, 1, 1);
 
   function populateSegmentHayBales(group) {
     if (group.userData.hayBalesPopulated) return;
-    var src = getHayBaleFenceSource();
-    if (!src) return; // GLB not loaded yet — try again next frame
+    var templates = buildHayBaleTemplates();
+    if (!templates) return; // GLB not loaded yet — retry next frame
     group.userData.hayBalesPopulated = true;
     var step = IS_LOW_END ? hayBaleFenceTargetZ * 1.6 : hayBaleFenceTargetZ * 1.05;
     var halfLen = SEGMENT_LENGTH / 2;
+    var positions = [];
     for (var hz = -halfLen + step / 2; hz <= halfLen - step / 2 + 0.001; hz += step) {
       for (var hs = 0; hs < 2; hs++) {
-        var haleX = (hs === 0 ? -1 : 1) * (ROAD_WIDTH / 2 + 0.5);
-        var bale = src.clone();
-        // Recompute Y so the bale sits on top of the sidewalk plane (y=0.08)
-        var bbox = new THREE.Box3().setFromObject(bale);
-        bale.position.set(haleX, 0.08 - bbox.min.y, hz);
-        bale.rotation.y = src.rotation.y + (Math.random() - 0.5) * 0.15;
-        group.add(bale);
+        positions.push({
+          x: (hs === 0 ? -1 : 1) * (ROAD_WIDTH / 2 + 0.5),
+          z: hz,
+          rotY: (Math.random() - 0.5) * 0.15
+        });
       }
+    }
+    var count = positions.length;
+    for (var ti = 0; ti < templates.length; ti++) {
+      var tmpl = templates[ti];
+      var inst = new THREE.InstancedMesh(tmpl.geometry, tmpl.material, count);
+      inst.castShadow = false;
+      inst.receiveShadow = false;
+      inst.userData.noOutline = true;
+      for (var i = 0; i < count; i++) {
+        var p = positions[i];
+        _halePos.set(p.x, hayBaleBaseY, p.z);
+        _haleEuler.set(0, p.rotY, 0);
+        _haleQuat.setFromEuler(_haleEuler);
+        _haleMat4.compose(_halePos, _haleQuat, _haleScale);
+        inst.setMatrixAt(i, _haleMat4);
+      }
+      inst.instanceMatrix.needsUpdate = true;
+      group.add(inst);
     }
   }
 
@@ -1068,18 +1120,17 @@
     // Road with texture (includes lane markings)
     var roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, SEGMENT_LENGTH);
     roadGeo.rotateX(-Math.PI / 2);
-    var roadMat = new THREE.MeshLambertMaterial({ map: roadTexture });
-    var road = new THREE.Mesh(roadGeo, roadMat);
+    var road = new THREE.Mesh(roadGeo, SHARED_ROAD_MAT);
     road.receiveShadow = true;
     group.add(road);
 
     // Curbs
     var curbGeo = new THREE.BoxGeometry(0.3, 0.1, SEGMENT_LENGTH);
-    var curbMat = createToonMaterial(0x888888);
-    var leftCurb = new THREE.Mesh(curbGeo, curbMat);
+    if (!SHARED_CURB_MAT) SHARED_CURB_MAT = createToonMaterial(0x888888);
+    var leftCurb = new THREE.Mesh(curbGeo, SHARED_CURB_MAT);
     leftCurb.position.set(-(ROAD_WIDTH / 2 + 0.15), 0.05, 0);
     group.add(leftCurb);
-    var rightCurb = new THREE.Mesh(curbGeo, curbMat);
+    var rightCurb = new THREE.Mesh(curbGeo, SHARED_CURB_MAT);
     rightCurb.position.set(ROAD_WIDTH / 2 + 0.15, 0.05, 0);
     group.add(rightCurb);
 
@@ -1088,12 +1139,11 @@
     // Sidewalks with brick texture
     var swGeo = new THREE.PlaneGeometry(3.5, SEGMENT_LENGTH);
     swGeo.rotateX(-Math.PI / 2);
-    var swMat = new THREE.MeshLambertMaterial({ map: sidewalkTexture });
-    var leftSW = new THREE.Mesh(swGeo, swMat);
+    var leftSW = new THREE.Mesh(swGeo, SHARED_SW_MAT);
     leftSW.position.set(-(ROAD_WIDTH / 2 + 1.75), 0.08, 0);
     leftSW.receiveShadow = true;
     group.add(leftSW);
-    var rightSW = new THREE.Mesh(swGeo, swMat);
+    var rightSW = new THREE.Mesh(swGeo, SHARED_SW_MAT);
     rightSW.position.set(ROAD_WIDTH / 2 + 1.75, 0.08, 0);
     rightSW.receiveShadow = true;
     group.add(rightSW);
@@ -3737,8 +3787,22 @@
   }
 
   // ===================== GAME LOOP =====================
+  var TARGET_FRAME_MS = 1000 / 60; // 60 FPS cap
+  var lastRenderTime = 0;
+  var shadowRefreshFrameCounter = 0;
   function gameLoop(time) {
     requestAnimationFrame(gameLoop);
+
+    // FPS cap: skip rendering frames that come too fast (uncapped displays / 144Hz monitors).
+    // Sim work is dt-based so capping render rate doesn't change game speed or feel.
+    if (time - lastRenderTime < TARGET_FRAME_MS - 0.5) return;
+    lastRenderTime = time;
+
+    // Refresh shadow map every 10 rendered frames (~6fps shadow updates) — invisible
+    // to the eye thanks to toon shading + motion, saves the shadow pass on 9/10 frames.
+    if (sunLight.castShadow) {
+      if ((++shadowRefreshFrameCounter) % 10 === 0) sunLight.shadow.needsUpdate = true;
+    }
 
     var dt = (time - lastTime) / 1000;
     lastTime = time;
